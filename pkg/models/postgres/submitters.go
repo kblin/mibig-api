@@ -306,7 +306,7 @@ func (m *SubmitterModel) List() ([]models.Submitter, error) {
 	statement := `SELECT u.user_id, u.email, u.name, u.call_name, u.institution, u.password_hash, u.is_public, u.gdpr_consent, u.active, array_agg(role_id) AS role_ids 
 FROM mibig_submitters.submitters AS u
 LEFT JOIN mibig_submitters.rel_submitters_roles USING (user_id)
-GROUP BY user_id`
+GROUP BY user_id ORDER BY user_id`
 	rows, err := m.DB.Query(statement)
 	if err != nil {
 		// No users is not an error in this context
