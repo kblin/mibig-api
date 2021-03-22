@@ -128,13 +128,28 @@ WHERE u.email = $1`
 	}
 	statement += ` GROUP BY user_id;`
 
-	var role_ids []int64
+	var (
+		role_ids_or_null []sql.NullInt64
+		role_ids         []int64
+	)
 
 	row := m.DB.QueryRow(statement, email)
 	err := row.Scan(&submitter.Id, &submitter.Email, &submitter.Name, &submitter.CallName, &submitter.Institution,
-		&submitter.PasswordHash, &submitter.Public, &submitter.GDPRConsent, &submitter.Active, pq.Array(&role_ids))
+		&submitter.PasswordHash, &submitter.Public, &submitter.GDPRConsent, &submitter.Active, pq.Array(&role_ids_or_null))
 	if err != nil {
 		return nil, err
+	}
+
+	for _, role_id_or_null := range role_ids_or_null {
+		role_id_value, err := role_id_or_null.Value()
+		if err != nil {
+			return nil, err
+		}
+		role_id, ok := role_id_value.(int64)
+		if !ok {
+			continue
+		}
+		role_ids = append(role_ids, role_id)
 	}
 
 	submitter.Roles, err = m.GetRolesById(role_ids)
@@ -304,12 +319,27 @@ GROUP BY user_id`
 
 	for rows.Next() {
 		var submitter models.Submitter
-		var role_ids []int64
+		var (
+			role_ids_or_null []sql.NullInt64
+			role_ids         []int64
+		)
 
 		err := rows.Scan(&submitter.Id, &submitter.Email, &submitter.Name, &submitter.CallName, &submitter.Institution,
-			&submitter.PasswordHash, &submitter.Public, &submitter.GDPRConsent, &submitter.Active, pq.Array(&role_ids))
+			&submitter.PasswordHash, &submitter.Public, &submitter.GDPRConsent, &submitter.Active, pq.Array(&role_ids_or_null))
 		if err != nil {
 			return nil, err
+		}
+
+		for _, role_id_or_null := range role_ids_or_null {
+			role_id_value, err := role_id_or_null.Value()
+			if err != nil {
+				return nil, err
+			}
+			role_id, ok := role_id_value.(int64)
+			if !ok {
+				continue
+			}
+			role_ids = append(role_ids, role_id)
 		}
 
 		submitter.Roles, err = m.GetRolesById(role_ids)
