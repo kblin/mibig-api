@@ -16,3 +16,38 @@ test:
 coverage:
 	go test -coverprofile=cover.prof ./...
 	go tool cover -html=cover.prof
+
+.PHONY: confirm
+confirm:
+	@echo -n 'Are you sure? [y/N] ' && read ans && [ $${ans:-N} = y ]
+
+.PHONY: db/migrations/new
+db/migrations/new:
+	@echo 'Creating migration files for ${name}...'
+	migrate create -seq -ext=.sql -dir=./migrations ${name}
+
+.PHONY: db/migrations/up
+db/migrations/up:
+	@echo 'Running up migrations...'
+	migrate -path=./migrations -database ${MIBIG_DSN} up
+
+.PHONY: db/migrations/down
+db/migrations/down:
+	@echo 'Running down migrations...'
+	migrate -path=./migrations -database ${MIBIG_DSN} down
+
+.PHONY: db/psql
+db/psql:
+	psql ${MIBIG_DSN}
+
+.PHONY: integration
+integration: all
+	migrate -path=./migrations -database ${MIBIG_DSN} down -all
+	migrate -path=./migrations -database ${MIBIG_DSN} up
+	./integration.sh
+
+.PHONY: local
+local: all
+	migrate -path=./migrations -database ${MIBIG_DSN} down -all
+	migrate -path=./migrations -database ${MIBIG_DSN} up
+	./load_externals.sh

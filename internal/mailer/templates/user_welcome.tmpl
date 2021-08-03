@@ -1,0 +1,33 @@
+{{define "subject"}}Welcome to MIBiG!{{end}}
+
+
+{{define "plainBody"}}
+Hi,
+
+Thanks for signing up for a MIBiG account, glad to have you join the community.
+
+Please visit {{.baseUrl}}user/activate?token={{.activationToken}} to activate your account.
+
+Please note that this is a one-time token and it will expire in 3 days.
+
+Best regards,
+the MIBiG team
+{{end}}
+
+{{define "htmlBody"}}
+<!doctype html>
+<html>
+<head>
+    <meta name="viewport" content="width=device-width" />
+    <meta http-equiv="Content-Type" content="text/html; charset=UTF-8" />
+</head>
+<body>
+    <p>Hi,</p>
+    <p>Thanks for signing up for a MIBiG account, glad to have you join the community.</p>
+    <p>Please visit <a href="{{.baseUrl}}user/activate?token={{.activationToken}}">the activation page</a> to activate your account.</p>
+    <p>Please note that this is a one-time token and it will expire in 3 days.</p>
+    <p>Best regards,<br>
+    the MIBiG team</p>
+</body>
+</html>
+{{end}}

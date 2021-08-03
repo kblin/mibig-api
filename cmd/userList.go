@@ -21,8 +21,8 @@ import (
 
 	"github.com/spf13/cobra"
 
-	"secondarymetabolites.org/mibig-api/pkg/models"
-	"secondarymetabolites.org/mibig-api/pkg/models/postgres"
+	"secondarymetabolites.org/mibig-api/internal/data"
+	"secondarymetabolites.org/mibig-api/internal/models"
 )
 
 // userListCmd represents the list command
@@ -47,16 +47,16 @@ func listUsers() {
 		panic(fmt.Errorf("Error opening database: %s", err))
 	}
 
-	userModel := postgres.NewSubmitterModel(db)
+	m := models.NewModels(db)
 
-	users, err := userModel.List()
+	users, err := m.Submitters.List()
 	if err != nil {
 		panic(fmt.Errorf("Error listing users: %s", err))
 	}
 
 	fmt.Printf("ID\tEmail\tName\tPublic\tGDPR\tActive\tRoles\n")
 	for _, user := range users {
-		role_string := strings.Join(models.RolesToStrings(user.Roles), ", ")
+		role_string := strings.Join(data.RolesToStrings(user.Roles), ", ")
 		fmt.Printf("%s\t%s\t%s\t%t\t%t\t%t\t%s\n", user.Id, user.Email, user.Name, user.Public, user.GDPRConsent, user.Active, role_string)
 	}
 }

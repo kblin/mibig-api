@@ -20,9 +20,9 @@ import (
 
 	"github.com/spf13/cobra"
 
-	"secondarymetabolites.org/mibig-api/pkg/models"
-	"secondarymetabolites.org/mibig-api/pkg/models/postgres"
-	"secondarymetabolites.org/mibig-api/pkg/utils"
+	"secondarymetabolites.org/mibig-api/internal/data"
+	"secondarymetabolites.org/mibig-api/internal/models"
+	"secondarymetabolites.org/mibig-api/internal/utils"
 )
 
 // userAddRoleCmd represents the userAddRole command
@@ -41,23 +41,23 @@ Only roles the user doesn't have yet will be added.`,
 			panic(fmt.Errorf("Error opening database: %s", err))
 		}
 
-		submitterModel := postgres.NewSubmitterModel(db)
+		m := models.NewModels(db)
 
-		user, err := submitterModel.Get(email, false)
+		user, err := m.Submitters.Get(email, false)
 		if err != nil {
 			panic(fmt.Errorf("Error reading user for %s: %s", email, err))
 		}
 
-		oldRoleNames := models.RolesToStrings(user.Roles)
+		oldRoleNames := data.RolesToStrings(user.Roles)
 
 		roleNames := utils.UnionString(oldRoleNames, newRoleNames)
 
-		user.Roles, err = submitterModel.GetRolesByName(roleNames)
+		user.Roles, err = m.Submitters.GetRolesByName(roleNames)
 		if err != nil {
 			panic(fmt.Errorf("Error looking up roles for %v: %s", roleNames, err))
 		}
 
-		err = submitterModel.Update(user, "")
+		err = m.Submitters.Update(user, "")
 		if err != nil {
 			panic(fmt.Errorf("Error updating user: %s", err))
 		}

@@ -19,7 +19,7 @@ import (
 	"github.com/spf13/cobra"
 	"github.com/spf13/viper"
 
-	"secondarymetabolites.org/mibig-api/pkg/web"
+	"secondarymetabolites.org/mibig-api/internal/web"
 )
 
 var debug bool

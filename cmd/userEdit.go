@@ -20,7 +20,7 @@ import (
 
 	"github.com/spf13/cobra"
 
-	"secondarymetabolites.org/mibig-api/pkg/models/postgres"
+	"secondarymetabolites.org/mibig-api/internal/models"
 )
 
 // userEditCmd represents the edit command
@@ -38,16 +38,15 @@ Change the user email, name, password, or roles.`,
 			panic(fmt.Errorf("Error opening database: %s", err))
 		}
 
-		submitterModel := postgres.NewSubmitterModel(db)
-		roleModel := postgres.RoleModel{DB: db}
+		m := models.NewModels(db)
 
-		user, err := submitterModel.Get(email, false)
+		user, err := m.Submitters.Get(email, false)
 		if err != nil {
 			panic(fmt.Errorf("Error reading user for %s: %s", email, err))
 		}
 
-		password := InteractiveUserEdit(user, &roleModel, submitterModel)
-		err = submitterModel.Update(user, password)
+		password := InteractiveUserEdit(user, m)
+		err = m.Submitters.Update(user, password)
 		if err != nil {
 			panic(fmt.Errorf("Error updating user: %s", err))
 		}

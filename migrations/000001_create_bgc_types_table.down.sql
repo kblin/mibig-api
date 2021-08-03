@@ -1,0 +1,3 @@
+DROP TABLE IF EXISTS mibig.bgc_types;
+
+DROP SCHEMA IF EXISTS mibig CASCADE;

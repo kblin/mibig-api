@@ -24,7 +24,8 @@ import (
 
 	"github.com/spf13/cobra"
 
-	"secondarymetabolites.org/mibig-api/pkg/models"
+	"secondarymetabolites.org/mibig-api/internal/data"
+	"secondarymetabolites.org/mibig-api/internal/models"
 )
 
 // repoImportCmd represents the repoImport command
@@ -44,10 +45,21 @@ JSON files are assumed to validate against the JSON schema.
 			panic(err)
 		}
 
-		var Entry models.MibigEntry
+		var Entry data.MibigEntry
 
 		if err = json.Unmarshal(jsonBytes, &Entry); err != nil {
 			panic(err)
+		}
+
+		db, err := InitDb()
+		if err != nil {
+			panic(fmt.Errorf("Error opening database: %s", err))
+		}
+
+		m := models.NewModels(db)
+		err = m.Entries.Add(Entry)
+		if err != nil {
+			panic(fmt.Errorf("Error writing entry to database: %s", err))
 		}
 
 		buf := new(bytes.Buffer)

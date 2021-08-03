@@ -20,7 +20,7 @@ import (
 
 	"github.com/spf13/cobra"
 
-	"secondarymetabolites.org/mibig-api/pkg/models/postgres"
+	"secondarymetabolites.org/mibig-api/internal/models"
 )
 
 // deleteCmd represents the delete command
@@ -38,8 +38,9 @@ Also cleans up group memberships of the deleted user.`,
 			panic(fmt.Errorf("Error opening database: %s", err))
 		}
 
-		userModel := postgres.NewSubmitterModel(db)
-		err = userModel.Delete(email)
+		m := models.NewModels(db)
+
+		err = m.Submitters.Delete(email)
 		if err != nil {
 			panic(fmt.Errorf("Error deleting user: %s", err))
 		}

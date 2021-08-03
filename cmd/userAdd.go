@@ -25,8 +25,8 @@ import (
 	readpass "github.com/seehuhn/password"
 	"github.com/spf13/cobra"
 
-	"secondarymetabolites.org/mibig-api/pkg/models"
-	"secondarymetabolites.org/mibig-api/pkg/models/postgres"
+	"secondarymetabolites.org/mibig-api/internal/data"
+	"secondarymetabolites.org/mibig-api/internal/models"
 )
 
 var (
@@ -49,7 +49,7 @@ var userAddCmd = &cobra.Command{
 
 Required parameters can be passed on the command line, or added in the interactive prompt.`,
 	Run: func(cmd *cobra.Command, args []string) {
-		user := models.Submitter{
+		user := data.Submitter{
 			Email:       email,
 			Name:        name,
 			CallName:    call_name,
@@ -63,16 +63,17 @@ Required parameters can be passed on the command line, or added in the interacti
 		if err != nil {
 			panic(fmt.Errorf("Error opening database: %s", err))
 		}
-		submitterModel := postgres.NewSubmitterModel(db)
-		user.Roles, err = submitterModel.GetRolesByName(role_list)
+
+		m := models.NewModels(db)
+
+		user.Roles, err = m.Submitters.GetRolesByName(role_list)
 		if err != nil {
 			panic(fmt.Errorf("Error getting roles: %s", err))
 		}
-		roleModel := postgres.RoleModel{DB: db}
 
 		if user.Email == "" || user.Name == "" || password == "" {
 			for {
-				password = InteractiveUserEdit(&user, &roleModel, submitterModel)
+				password = InteractiveUserEdit(&user, m)
 				if user.Email != "" && user.Name != "" && password != "" {
 					break
 				}
@@ -80,7 +81,7 @@ Required parameters can be passed on the command line, or added in the interacti
 			}
 		}
 
-		err = submitterModel.Insert(&user, password)
+		err = m.Submitters.Insert(&user, password)
 		if err != nil {
 			panic(fmt.Errorf("Error adding user: %s", err))
 		}
@@ -101,7 +102,7 @@ func init() {
 	userAddCmd.Flags().StringSliceVarP(&role_list, "role", "r", []string{"guest"}, "Roles of the user")
 }
 
-func InteractiveUserEdit(user *models.Submitter, roleModel models.RoleModel, submitterModel models.SubmitterModel) string {
+func InteractiveUserEdit(user *data.Submitter, m models.Models) string {
 	reader := bufio.NewReader(os.Stdin)
 
 	user.Email = readStringValue(reader, user.Email, "Email [%s]: ")
@@ -115,7 +116,7 @@ func InteractiveUserEdit(user *models.Submitter, roleModel models.RoleModel, sub
 	user.Public = readBool(reader, user.Public, "Public profile (true/false) [%s]: ")
 	user.GDPRConsent = readBool(reader, user.GDPRConsent, "GDPR consent given (true/false) [%s]: ")
 	user.Active = readBool(reader, user.Active, "Active (true/false) [%s]: ")
-	user.Roles = readRoles(reader, roleModel, submitterModel, user.Roles)
+	user.Roles = readRoles(reader, m, user.Roles)
 
 	return new_password
 }
@@ -186,18 +187,18 @@ func readBool(reader *bufio.Reader, oldVal bool, template string) bool {
 	return newVal
 }
 
-func readRoles(reader *bufio.Reader, roleModel models.RoleModel, submitterModel models.SubmitterModel, old_roles []models.Role) []models.Role {
-	var new_roles []models.Role
+func readRoles(reader *bufio.Reader, m models.Models, old_roles []data.Role) []data.Role {
+	var new_roles []data.Role
 
-	availableRoles, err := roleModel.List()
+	availableRoles, err := m.Roles.List()
 	if err != nil {
 		panic(fmt.Errorf("Error reading roles: %s", err))
 	}
 
-	fmt.Println("Available roles:", strings.Join(models.RolesToStrings(availableRoles), ", "))
+	fmt.Println("Available roles:", strings.Join(data.RolesToStrings(availableRoles), ", "))
 
 	for {
-		stringRoles := strings.Join(models.RolesToStrings(old_roles), ", ")
+		stringRoles := strings.Join(data.RolesToStrings(old_roles), ", ")
 		fmt.Printf("Roles [%s]: ", stringRoles)
 		tmp_string := readInput(reader)
 		if tmp_string == "" {
@@ -205,7 +206,7 @@ func readRoles(reader *bufio.Reader, roleModel models.RoleModel, submitterModel 
 		}
 		parts := strings.Split(strings.Replace(tmp_string, " ", "", -1), ",")
 		fmt.Fprintf(os.Stderr, "%v\n", parts)
-		new_roles, err = submitterModel.GetRolesByName(parts)
+		new_roles, err = m.Submitters.GetRolesByName(parts)
 		if err != nil {
 			fmt.Fprintf(os.Stderr, "Error getting roles: %s", err.Error())
 			continue
