@@ -205,21 +205,18 @@ func readRoles(reader *bufio.Reader, m models.Models, old_roles []data.Role) []d
 			return old_roles
 		}
 		parts := strings.Split(strings.Replace(tmp_string, " ", "", -1), ",")
-		fmt.Fprintf(os.Stderr, "%v\n", parts)
 		new_roles, err = m.Submitters.GetRolesByName(parts)
 		if err != nil {
 			fmt.Fprintf(os.Stderr, "Error getting roles: %s", err.Error())
 			continue
 		}
 
-		fmt.Fprintf(os.Stderr, "%v\n", new_roles)
 		// TODO: check if all roles are valid
 		if len(new_roles) > 0 {
 			break
 		}
 	}
 
-	fmt.Fprintf(os.Stderr, "%v\n", new_roles)
 	return new_roles
 }
 
