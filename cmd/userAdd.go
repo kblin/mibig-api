@@ -99,7 +99,7 @@ func init() {
 	userAddCmd.Flags().StringVarP(&name, "name", "n", "", "Name of user")
 	userAddCmd.Flags().StringVarP(&password, "password", "p", "", "Password of user")
 	userAddCmd.Flags().BoolVarP(&public, "public", "P", false, "Added account is public")
-	userAddCmd.Flags().StringSliceVarP(&role_list, "role", "r", []string{"guest"}, "Roles of the user")
+	userAddCmd.Flags().StringSliceVarP(&role_list, "role", "r", []string{"submitter"}, "Roles of the user")
 }
 
 func InteractiveUserEdit(user *data.Submitter, m models.Models) string {

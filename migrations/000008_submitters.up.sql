@@ -23,8 +23,7 @@ INSERT INTO mibig_submitters.roles (role_id, name, description)
 VALUES
     (1, 'admin', 'Users who can manage other users'),
     (2, 'curator', 'Users who can approve new entries'),
-    (3, 'submitter', 'Users who can edit entries'),
-    (4, 'guest', 'Users with read only access');
+    (3, 'submitter', 'Users who can edit entries');
 
 CREATE TABLE IF NOT EXISTS mibig_submitters.rel_submitters_roles (
     user_id text REFERENCES mibig_submitters.submitters ON DELETE CASCADE,
