@@ -53,13 +53,13 @@ JSON files are assumed to validate against the JSON schema.
 
 		db, err := InitDb()
 		if err != nil {
-			panic(fmt.Errorf("Error opening database: %s", err))
+			panic(fmt.Errorf("error opening database: %s", err))
 		}
 
 		m := models.NewModels(db)
 		err = m.Entries.Add(Entry)
 		if err != nil {
-			panic(fmt.Errorf("Error writing entry to database: %s", err))
+			panic(fmt.Errorf("error writing entry to database: %s", err))
 		}
 
 		buf := new(bytes.Buffer)

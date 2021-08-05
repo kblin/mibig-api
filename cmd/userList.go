@@ -44,14 +44,14 @@ func init() {
 func listUsers() {
 	db, err := InitDb()
 	if err != nil {
-		panic(fmt.Errorf("Error opening database: %s", err))
+		panic(fmt.Errorf("error opening database: %s", err))
 	}
 
 	m := models.NewModels(db)
 
 	users, err := m.Submitters.List()
 	if err != nil {
-		panic(fmt.Errorf("Error listing users: %s", err))
+		panic(fmt.Errorf("error listing users: %s", err))
 	}
 
 	fmt.Printf("ID\tEmail\tName\tPublic\tGDPR\tActive\tRoles\n")

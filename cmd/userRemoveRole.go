@@ -38,14 +38,14 @@ Only roles the user possesses will be removed.`,
 		deleteRoleNames := args[1:]
 		db, err := InitDb()
 		if err != nil {
-			panic(fmt.Errorf("Error opening database: %s", err))
+			panic(fmt.Errorf("error opening database: %s", err))
 		}
 
 		m := models.NewModels(db)
 
 		user, err := m.Submitters.Get(email, false)
 		if err != nil {
-			panic(fmt.Errorf("Error reading user for %s: %s", email, err))
+			panic(fmt.Errorf("error reading user for %s: %s", email, err))
 		}
 
 		oldRoleNames := data.RolesToStrings(user.Roles)
@@ -54,12 +54,12 @@ Only roles the user possesses will be removed.`,
 
 		user.Roles, err = m.Submitters.GetRolesByName(roleNames)
 		if err != nil {
-			panic(fmt.Errorf("Error getting roles for %v: %s", roleNames, err))
+			panic(fmt.Errorf("error getting roles for %v: %s", roleNames, err))
 		}
 
 		err = m.Submitters.Update(user, "")
 		if err != nil {
-			panic(fmt.Errorf("Error updating user: %s", err))
+			panic(fmt.Errorf("error updating user: %s", err))
 		}
 	},
 }

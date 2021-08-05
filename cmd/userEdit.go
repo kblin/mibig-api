@@ -35,20 +35,20 @@ Change the user email, name, password, or roles.`,
 		email := args[0]
 		db, err := InitDb()
 		if err != nil {
-			panic(fmt.Errorf("Error opening database: %s", err))
+			panic(fmt.Errorf("error opening database: %s", err))
 		}
 
 		m := models.NewModels(db)
 
 		user, err := m.Submitters.Get(email, false)
 		if err != nil {
-			panic(fmt.Errorf("Error reading user for %s: %s", email, err))
+			panic(fmt.Errorf("error reading user for %s: %s", email, err))
 		}
 
 		password := InteractiveUserEdit(user, m)
 		err = m.Submitters.Update(user, password)
 		if err != nil {
-			panic(fmt.Errorf("Error updating user: %s", err))
+			panic(fmt.Errorf("error updating user: %s", err))
 		}
 	},
 }

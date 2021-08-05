@@ -61,14 +61,14 @@ Required parameters can be passed on the command line, or added in the interacti
 
 		db, err := InitDb()
 		if err != nil {
-			panic(fmt.Errorf("Error opening database: %s", err))
+			panic(fmt.Errorf("error opening database: %s", err))
 		}
 
 		m := models.NewModels(db)
 
 		user.Roles, err = m.Submitters.GetRolesByName(role_list)
 		if err != nil {
-			panic(fmt.Errorf("Error getting roles: %s", err))
+			panic(fmt.Errorf("error getting roles: %s", err))
 		}
 
 		if user.Email == "" || user.Name == "" || password == "" {
@@ -83,7 +83,7 @@ Required parameters can be passed on the command line, or added in the interacti
 
 		err = m.Submitters.Insert(&user, password)
 		if err != nil {
-			panic(fmt.Errorf("Error adding user: %s", err))
+			panic(fmt.Errorf("error adding user: %s", err))
 		}
 	},
 }
@@ -144,7 +144,7 @@ func readPassword() string {
 	for {
 		pw_bytes, err := readpass.Read("Password (empty to keep old): ")
 		if err != nil {
-			panic(fmt.Errorf("Error reading password: %s", err))
+			panic(fmt.Errorf("error reading password: %s", err))
 		}
 		password = string(pw_bytes)
 
@@ -154,7 +154,7 @@ func readPassword() string {
 
 		pw_bytes, err = readpass.Read("Repeat password: ")
 		if err != nil {
-			panic(fmt.Errorf("Error reading password: %s", err))
+			panic(fmt.Errorf("error reading password: %s", err))
 		}
 		password_repeat = string(pw_bytes)
 
@@ -192,7 +192,7 @@ func readRoles(reader *bufio.Reader, m models.Models, old_roles []data.Role) []d
 
 	availableRoles, err := m.Roles.List()
 	if err != nil {
-		panic(fmt.Errorf("Error reading roles: %s", err))
+		panic(fmt.Errorf("error reading roles: %s", err))
 	}
 
 	fmt.Println("Available roles:", strings.Join(data.RolesToStrings(availableRoles), ", "))
@@ -226,7 +226,7 @@ func readRoles(reader *bufio.Reader, m models.Models, old_roles []data.Role) []d
 func readInput(reader *bufio.Reader) string {
 	userInput, err := reader.ReadString('\n')
 	if err != nil {
-		panic(fmt.Errorf("Error reading user input: %s", err.Error()))
+		panic(fmt.Errorf("error reading user input: %s", err.Error()))
 	}
 	userInput = strings.Replace(userInput, "\n", "", -1)
 	return userInput

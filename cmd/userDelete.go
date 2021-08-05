@@ -35,14 +35,14 @@ Also cleans up group memberships of the deleted user.`,
 		email := args[0]
 		db, err := InitDb()
 		if err != nil {
-			panic(fmt.Errorf("Error opening database: %s", err))
+			panic(fmt.Errorf("error opening database: %s", err))
 		}
 
 		m := models.NewModels(db)
 
 		err = m.Submitters.Delete(email)
 		if err != nil {
-			panic(fmt.Errorf("Error deleting user: %s", err))
+			panic(fmt.Errorf("error deleting user: %s", err))
 		}
 	},
 }
