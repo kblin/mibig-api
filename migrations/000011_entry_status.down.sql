@@ -1,0 +1,1 @@
+DROP TABLE IF EXISTS mibig.entry_status;

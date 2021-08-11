@@ -28,6 +28,14 @@ import (
 	"secondarymetabolites.org/mibig-api/internal/models"
 )
 
+var (
+	status string
+)
+
+func getValidStates() []string {
+	return []string{"published", "retired", "embargoed", "reserved"}
+}
+
 // repoImportCmd represents the repoImport command
 var repoImportCmd = &cobra.Command{
 	Use:   "import <json file>",
@@ -38,6 +46,20 @@ JSON files are assumed to validate against the JSON schema.
 `,
 	Args: cobra.MinimumNArgs(1),
 	Run: func(cmd *cobra.Command, args []string) {
+
+		valid := false
+		for _, validState := range getValidStates() {
+			if status == validState {
+				valid = true
+				break
+			}
+		}
+
+		if !valid {
+			fmt.Fprintf(os.Stderr, "invalid status '%s', needs to be one of %v", status, getValidStates())
+			os.Exit(2)
+		}
+
 		jsonFileName := args[0]
 
 		jsonBytes, err := os.ReadFile(jsonFileName)
@@ -51,15 +73,25 @@ JSON files are assumed to validate against the JSON schema.
 			panic(err)
 		}
 
+		Status := data.MibigEntryStatus{
+			EntryId: Entry.Cluster.MibigAccession,
+			Status:  status,
+		}
 		db, err := InitDb()
 		if err != nil {
 			panic(fmt.Errorf("error opening database: %s", err))
 		}
 
 		m := models.NewModels(db)
+
+		err = m.Entries.InsertEntryStatus(Status)
+		if err != nil {
+			panic(fmt.Errorf("error writing entry status: %s", err))
+		}
+
 		err = m.Entries.Add(Entry)
 		if err != nil {
-			panic(fmt.Errorf("error writing entry to database: %s", err))
+			panic(fmt.Errorf("error writing entry %s %s to database: %s", Entry.Cluster.MibigAccession, Entry.Cluster.NcbiTaxId, err))
 		}
 
 		buf := new(bytes.Buffer)
@@ -75,4 +107,6 @@ JSON files are assumed to validate against the JSON schema.
 
 func init() {
 	repoCmd.AddCommand(repoImportCmd)
+	status_help := fmt.Sprintf("Status of the entry to be loaded %v", getValidStates())
+	repoImportCmd.Flags().StringVarP(&status, "status", "s", "published", status_help)
 }

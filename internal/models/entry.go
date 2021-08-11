@@ -25,6 +25,7 @@ type EntryModel interface {
 	LookupContributors(ids []string) ([]data.Contributor, error)
 
 	Add(entry data.MibigEntry) error
+	InsertEntryStatus(status data.MibigEntryStatus) error
 }
 
 type LiveEntryModel struct {
@@ -538,5 +539,9 @@ func (m *MockEntryModel) LookupContributors(ids []string) ([]data.Contributor, e
 }
 
 func (m *MockEntryModel) Add(entry data.MibigEntry) error {
+	return data.ErrNotImplemented
+}
+
+func (m *MockEntryModel) InsertEntryStatus(status data.MibigEntryStatus) error {
 	return data.ErrNotImplemented
 }

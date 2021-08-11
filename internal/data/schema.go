@@ -323,3 +323,10 @@ type MibigEntry struct {
 	Cluster    Cluster     `json:"cluster"`
 	Comments   string      `json:"comments,omitempty"` // TODO: Do we still need this, now that we have the changelog?
 }
+
+type MibigEntryStatus struct {
+	EntryId string
+	Status  string
+	Reason  string
+	See     []string
+}

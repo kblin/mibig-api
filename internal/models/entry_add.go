@@ -59,6 +59,28 @@ func (m *LiveEntryModel) Add(entry data.MibigEntry) error {
 	return tx.Commit()
 }
 
+func (m LiveEntryModel) InsertEntryStatus(status data.MibigEntryStatus) error {
+	query := `INSERT INTO mibig.entry_status (entry_id, status, reason, see)
+	VALUES ($1, $2, $3, $4)`
+
+	args := []interface{}{
+		status.EntryId,
+		status.Status,
+		status.Reason,
+		pq.Array(status.See),
+	}
+
+	ctx, cancel := context.WithTimeout(context.Background(), DEFAULT_DB_TIMEOUT)
+	defer cancel()
+
+	_, err := m.DB.ExecContext(ctx, query, args...)
+	if err != nil {
+		return err
+	}
+
+	return nil
+}
+
 func insertEntry(entry data.MibigEntry, ctx context.Context, tx *sql.Tx) error {
 
 	tax_id, err := getOrCreateTaxId(entry, ctx, tx)
