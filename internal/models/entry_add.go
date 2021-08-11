@@ -83,15 +83,33 @@ func (m LiveEntryModel) InsertEntryStatus(status data.MibigEntryStatus) error {
 
 func insertEntry(entry data.MibigEntry, ctx context.Context, tx *sql.Tx) error {
 
-	tax_id, err := getOrCreateTaxId(entry, ctx, tx)
+	ncbi_taxid, err := strconv.ParseInt(entry.Cluster.NcbiTaxId, 10, 64)
 	if err != nil {
 		tx.Rollback()
 		return err
 	}
 
+	name := entry.Cluster.OrganismName
+
+	tax_id, err := getOrCreateTaxId(name, ncbi_taxid, ctx, tx)
+	if err != nil {
+		switch {
+		case errors.Is(err, errTaxidOutdated):
+			ncbi_taxid = tax_id
+			tax_id, err = getOrCreateTaxId(name, ncbi_taxid, ctx, tx)
+			if err != nil {
+				tx.Rollback()
+				return err
+			}
+		default:
+			tx.Rollback()
+			return err
+		}
+	}
+
 	statement := `INSERT INTO mibig.entries (
 		entry_id, minimal, tax_id, organism_name, biosyn_class, legacy_comment
-	) VALUES ($1, $2, $3, $4, $5, $6)`
+	) VALUES ($1, $2, $3, $4, $5, $6, $7)`
 
 	cluster := entry.Cluster
 
@@ -112,27 +130,52 @@ func insertEntry(entry data.MibigEntry, ctx context.Context, tx *sql.Tx) error {
 	return nil
 }
 
-func getOrCreateTaxId(entry data.MibigEntry, ctx context.Context, tx *sql.Tx) (int32, error) {
-	ncbi_taxid, err := strconv.ParseInt(entry.Cluster.NcbiTaxId, 10, 32)
-	if err != nil {
-		tx.Rollback()
-		return -1, err
-	}
+var errTaxidOutdated = errors.New("taxId outdated, please retry")
 
-	var tax_id int32
+func getOrCreateTaxId(name string, ncbi_taxid int64, ctx context.Context, tx *sql.Tx) (int64, error) {
+	var tax_id int64
 
 	args := []interface{}{
-		int32(ncbi_taxid),
-		entry.Cluster.OrganismName,
+		ncbi_taxid,
+		name,
 	}
 
-	err = tx.QueryRow(`SELECT tax_id FROM mibig.taxa WHERE ncbi_taxid = $1 AND name = $2`, args...).Scan(&tax_id)
+	err := tx.QueryRow(`SELECT tax_id FROM mibig.taxa WHERE ncbi_taxid = $1 AND name = $2`, args...).Scan(&tax_id)
 	if err != nil {
 		if errors.Is(err, sql.ErrNoRows) {
-			// TODO: hit a database with the ncbi_taxid, get the lineage, create a new entry
-			// For now, just die
-			tx.Rollback()
-			return -1, err
+			ncbiTaxEntry, err := data.EntryForTaxId(ncbi_taxid)
+			if err != nil {
+				tx.Rollback()
+				return -1, err
+			}
+
+			if ncbi_taxid != ncbiTaxEntry.TaxId {
+				return ncbiTaxEntry.TaxId, errTaxidOutdated
+			}
+
+			query := `INSERT INTO mibig.taxa
+				(ncbi_taxid, superkingdom, kingdom, phylum, class, taxonomic_order, family, genus, species, name)
+				VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10) RETURNING tax_id`
+
+			args := []interface{}{
+				ncbi_taxid,
+				ncbiTaxEntry.Superkingdom,
+				ncbiTaxEntry.Kingdom,
+				ncbiTaxEntry.Phylum,
+				ncbiTaxEntry.Class,
+				ncbiTaxEntry.Order,
+				ncbiTaxEntry.Family,
+				ncbiTaxEntry.Genus,
+				ncbiTaxEntry.Species,
+				name,
+			}
+
+			err = tx.QueryRow(query, args...).Scan(&tax_id)
+			if err != nil {
+				tx.Rollback()
+				return -1, err
+			}
+
 		} else {
 			tx.Rollback()
 			return -1, err
