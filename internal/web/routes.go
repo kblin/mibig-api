@@ -2,11 +2,10 @@ package web
 
 import (
 	"github.com/gin-gonic/gin"
-
-	"secondarymetabolites.org/mibig-api/internal/data"
 )
 
 func (app *application) routes() *gin.Engine {
+	app.Mux.Use(app.Authenticate())
 	api := app.Mux.Group("/api")
 	{
 		v1 := api.Group("/v1")
@@ -27,8 +26,13 @@ func (app *application) routes() *gin.Engine {
 				user.PUT("/activate", app.Activate)
 			}
 
-			v1.GET("/authtest", app.JWTAuthenticated([]data.Role{}), app.AuthTest)
+			v1.GET("/authtest", app.AuthTest)
 
+			edit := v1.Group("/edit", app.RequireRoles([]string{"submitter"}))
+			{
+				edit.GET("/", app.listRequests)
+				edit.POST("/submit", app.submit)
+			}
 			/*
 				v1.POST("/submit", app.JWTAuthenticated([]models.Role{}), app.submit)
 				v1.POST("/bgc-registration", app.JWTAuthenticated([]models.Role{}), app.LegacyStoreSubmission)

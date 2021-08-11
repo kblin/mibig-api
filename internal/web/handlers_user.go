@@ -5,11 +5,13 @@ import (
 	"net/http"
 	"time"
 
-	"github.com/dgrijalva/jwt-go"
 	"github.com/gin-gonic/gin"
 	"github.com/spf13/viper"
 	"secondarymetabolites.org/mibig-api/internal/data"
 )
+
+const AUTH_TOKEN_DURATION = 24 * time.Hour
+const AUTH_COOKIE_NAME = "authentication_token"
 
 type loginData struct {
 	Email    string `json:"email"`
@@ -36,38 +38,23 @@ func (app *application) Login(c *gin.Context) {
 		}
 	}
 
-	expirationTime := time.Now().Add(2 * time.Hour)
-
-	claims := &Claims{
-		Name:  user.Name,
-		Email: user.Email,
-		Roles: data.RolesToStrings(user.Roles),
-		StandardClaims: jwt.StandardClaims{
-			Subject:   user.Id,
-			ExpiresAt: expirationTime.Unix(),
-			IssuedAt:  time.Now().Unix(),
-			Issuer:    viper.GetString("server.name"),
-		},
-	}
-
-	token := jwt.NewWithClaims(jwt.SigningMethodHS256, claims)
-	tokenString, err := token.SignedString([]byte(viper.GetString("server.secret")))
+	token, err := app.Models.Tokens.New(user.Id, AUTH_TOKEN_DURATION, data.ScopeAuthentication)
 	if err != nil {
 		app.serverError(c, err)
-		return
 	}
 
-	c.JSON(http.StatusOK, gin.H{"token": tokenString, "call_name": user.CallName})
+	c.SetCookie(AUTH_COOKIE_NAME, token.Plaintext, int(AUTH_TOKEN_DURATION/1000), "/", viper.GetString("server.name"), false, true)
+	c.JSON(http.StatusOK, gin.H{"authentication_token": token})
 }
 
 func (app *application) Logout(c *gin.Context) {
-	c.SetCookie("token", "", -1, "/", viper.GetString("server.name"), false, true)
+	c.SetCookie(AUTH_COOKIE_NAME, "", -1, "/", viper.GetString("server.name"), false, true)
 	c.AbortWithStatus(http.StatusNoContent)
 }
 
 func (app *application) AuthTest(c *gin.Context) {
-	claims := c.MustGet("claims").(*Claims)
-	c.String(http.StatusOK, "Hello %s!", claims.Name)
+	user := app.GetCurrentUser(c)
+	c.String(http.StatusOK, "Hello %s!", user.CallName)
 }
 
 func (app *application) Register(c *gin.Context) {

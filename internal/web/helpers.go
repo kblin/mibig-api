@@ -6,6 +6,7 @@ import (
 
 	"github.com/gin-gonic/gin"
 	zap "go.uber.org/zap"
+	"secondarymetabolites.org/mibig-api/internal/data"
 )
 
 func (app *application) clientError(c *gin.Context, status int) {
@@ -25,8 +26,26 @@ func (app *application) serverError(c *gin.Context, err error) {
 	c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error(), "message": http.StatusText(http.StatusInternalServerError)})
 }
 
-func (app *application) notFound(c *gin.Context) {
-	app.clientError(c, http.StatusNotFound)
+func (app *application) invalidAuthToken(c *gin.Context) {
+	c.Writer.Header().Set("WWW-Authenticate", "Bearer")
+	app.clientErrorWithMessage(c, http.StatusUnauthorized, "invalid or missing authentication token")
+}
+
+func (app *application) authenticationRequired(c *gin.Context) {
+	app.clientErrorWithMessage(c, http.StatusUnauthorized, "you must be authenticated to access this resource")
+}
+
+func (app *application) inactiveAccount(c *gin.Context) {
+	app.clientErrorWithMessage(c, http.StatusUnauthorized, "your account must be activated to access this resouce")
+}
+
+func (app *application) notPermitted(c *gin.Context) {
+	message := "your account doesn't have the necessary permissions to access this resource"
+	app.clientErrorWithMessage(c, http.StatusUnauthorized, message)
+}
+
+func (app *application) GetCurrentUser(c *gin.Context) *data.Submitter {
+	return c.MustGet("user").(*data.Submitter)
 }
 
 func (app *application) background(fn func()) {
