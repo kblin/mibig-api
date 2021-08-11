@@ -125,31 +125,3 @@ type Contributor struct {
 	Email        string `json:"email"`
 	Organisation string `json:"organisation"`
 }
-
-type Submitter struct {
-	Id           string
-	Email        string
-	Name         string
-	CallName     string
-	Institution  string
-	PasswordHash []byte
-	Public       bool
-	GDPRConsent  bool
-	Active       bool
-	Roles        []Role
-	Version      int
-}
-
-type Role struct {
-	Id          int
-	Name        string
-	Description string
-}
-
-func RolesToStrings(roles []Role) []string {
-	roleNames := make([]string, 0, len(roles))
-	for _, role := range roles {
-		roleNames = append(roleNames, role.Name)
-	}
-	return roleNames
-}
