@@ -66,7 +66,7 @@ type ChemCompound struct {
 	ChemTargets      []ChemTarget `json:"chem_targets,omitempty"`
 	Name             string       `json:"compound"`
 	DatabaseIds      []string     `json:"database_id,omitempty"`
-	Evidences        []string     `json:"evidence,omitempty"`
+	Evidence         []string     `json:"evidence,omitempty"`
 	MassSpecIonType  string       `json:"mass_spec_ion_type,omitempty"`
 	MolecularMass    float64      `json:"mol_mass,omitempty"`
 	MolecularFormula string       `json:"molecular_formula,omitempty"`
@@ -76,7 +76,7 @@ type Loci struct {
 	Accession     string   `json:"accession"`
 	Completeness  string   `json:"completeness"` // TODO: Turn into an enum
 	EndCoord      int64    `json:"end_coord,omitempty"`
-	Evidences     []string `json:"evidence,omitempty"` // TODO: Turn into an enum
+	Evidence      []string `json:"evidence,omitempty"` // TODO: Turn into an enum
 	MixsCompliant bool     `json:"mixs_compliant,omitempty"`
 	StartCoord    int64    `json:"start_coord,omitempty"`
 }
@@ -99,8 +99,8 @@ type GeneAnnotations struct {
 }
 
 type GeneFunctions struct {
-	Category  string   `json:"category"` // TODO: restrict possible categories?
-	Evidences []string `json:"evidence"`
+	Category string   `json:"category"` // TODO: restrict possible categories?
+	Evidence []string `json:"evidence"`
 }
 
 type ExtraGene struct {
@@ -120,8 +120,8 @@ type Exon struct {
 }
 
 type Operon struct {
-	Evidences []string `json:"evidence"` // TODO: Turn into an enum
-	Genes     []string `json:"genes"`    // TODO: Validate against the available genes
+	Evidence []string `json:"evidence"` // TODO: Turn into an enum
+	Genes    []string `json:"genes"`    // TODO: Validate against the available genes
 }
 
 type Thioesterase struct {
@@ -132,13 +132,13 @@ type Thioesterase struct {
 type ADomainSubstrateSpecificity struct {
 	AminoAcidSubcluster []string `json:"aa_subcluster,omitempty"`
 	Epimerized          bool     `json:"epimerized"`
-	Evidences           []string `json:"evidence,omitempty"`
+	Evidence            []string `json:"evidence,omitempty"`
 	Nonproteinogenic    []string `json:"nonproteinogenic,omitempty"`
 	Proteinogenic       []string `json:"proteinogenic,omitempty"`
 }
 
 type NonCanonicalModule struct {
-	Evidences     []string `json:"evidence,omitempty"`
+	Evidence      []string `json:"evidence,omitempty"`
 	Iterated      bool     `json:"iterated"`
 	NonElongating bool     `json:"non_elongating"`
 	Skipped       bool     `json:"skipped"`
@@ -161,7 +161,7 @@ type NrpsGene struct {
 
 type PksIterative struct {
 	CyclizationType string   `json:"cyclization_type"`
-	Evidences       []string `json:"evidence,omitempty"`
+	Evidence        []string `json:"evidence,omitempty"`
 	Genes           []string `json:"genes,omitempty"` // TODO: Validate against the synthase entry's gene list
 	NrIterations    int64    `json:"nr_iterations,omitempty"`
 	Subtype         string   `json:"subtype"` // TODO: Turn into an enum
@@ -210,7 +210,7 @@ type RippCrosslink struct {
 }
 
 type Glycosyltransferase struct {
-	Evidences   []string `json:"evidence"` // TODO: Turn into an enum
+	Evidence    []string `json:"evidence"` // TODO: Turn into an enum
 	GeneId      string   `json:"gene_id"`  // TODO: Valdiate against cluster's gene list
 	Specificity string   `json:"specificity"`
 }

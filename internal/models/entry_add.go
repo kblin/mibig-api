@@ -359,7 +359,7 @@ func insertLocus(entry data.MibigEntry, ctx context.Context, tx *sql.Tx) error {
 	args := []interface{}{
 		locus.Accession,
 		strings.ToLower(locus.Completeness),
-		pq.Array(locus.Evidences),
+		pq.Array(locus.Evidence),
 		locus.StartCoord,
 		locus.EndCoord,
 		locus.MixsCompliant,
