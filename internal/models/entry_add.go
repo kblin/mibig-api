@@ -13,14 +13,14 @@ import (
 	"secondarymetabolites.org/mibig-api/internal/data"
 )
 
-func (m *LiveEntryModel) Add(entry data.MibigEntry) error {
+func (m *LiveEntryModel) Add(entry data.MibigEntry, taxCache *data.TaxonCache) error {
 	ctx := context.Background()
 	tx, err := m.DB.BeginTx(ctx, nil)
 	if err != nil {
 		return err
 	}
 
-	err = insertEntry(entry, ctx, tx)
+	err = insertEntry(entry, taxCache, ctx, tx)
 	if err != nil {
 		tx.Rollback()
 		return err
@@ -81,7 +81,33 @@ func (m LiveEntryModel) InsertEntryStatus(status data.MibigEntryStatus) error {
 	return nil
 }
 
-func insertEntry(entry data.MibigEntry, ctx context.Context, tx *sql.Tx) error {
+func (m LiveEntryModel) LoadTaxonEntry(name string, ncbi_taxid int64, taxCache *data.TaxonCache) error {
+	ctx := context.Background()
+	tx, err := m.DB.BeginTx(ctx, nil)
+	if err != nil {
+		return err
+	}
+
+	tax_id, err := getOrCreateTaxId(name, ncbi_taxid, taxCache, ctx, tx)
+	if err != nil {
+		switch {
+		case errors.Is(err, errTaxidOutdated):
+			ncbi_taxid = tax_id
+			_, err = getOrCreateTaxId(name, ncbi_taxid, taxCache, ctx, tx)
+			if err != nil {
+				tx.Rollback()
+				return err
+			}
+		default:
+			tx.Rollback()
+			return err
+		}
+	}
+
+	return tx.Commit()
+}
+
+func insertEntry(entry data.MibigEntry, taxCache *data.TaxonCache, ctx context.Context, tx *sql.Tx) error {
 
 	ncbi_taxid, err := strconv.ParseInt(entry.Cluster.NcbiTaxId, 10, 64)
 	if err != nil {
@@ -91,12 +117,12 @@ func insertEntry(entry data.MibigEntry, ctx context.Context, tx *sql.Tx) error {
 
 	name := entry.Cluster.OrganismName
 
-	tax_id, err := getOrCreateTaxId(name, ncbi_taxid, ctx, tx)
+	tax_id, err := getOrCreateTaxId(name, ncbi_taxid, taxCache, ctx, tx)
 	if err != nil {
 		switch {
 		case errors.Is(err, errTaxidOutdated):
 			ncbi_taxid = tax_id
-			tax_id, err = getOrCreateTaxId(name, ncbi_taxid, ctx, tx)
+			tax_id, err = getOrCreateTaxId(name, ncbi_taxid, taxCache, ctx, tx)
 			if err != nil {
 				tx.Rollback()
 				return err
@@ -132,7 +158,7 @@ func insertEntry(entry data.MibigEntry, ctx context.Context, tx *sql.Tx) error {
 
 var errTaxidOutdated = errors.New("taxId outdated, please retry")
 
-func getOrCreateTaxId(name string, ncbi_taxid int64, ctx context.Context, tx *sql.Tx) (int64, error) {
+func getOrCreateTaxId(name string, ncbi_taxid int64, taxCache *data.TaxonCache, ctx context.Context, tx *sql.Tx) (int64, error) {
 	var tax_id int64
 
 	args := []interface{}{
@@ -143,7 +169,7 @@ func getOrCreateTaxId(name string, ncbi_taxid int64, ctx context.Context, tx *sq
 	err := tx.QueryRow(`SELECT tax_id FROM mibig.taxa WHERE ncbi_taxid = $1 AND name = $2`, args...).Scan(&tax_id)
 	if err != nil {
 		if errors.Is(err, sql.ErrNoRows) {
-			ncbiTaxEntry, err := data.EntryForTaxId(ncbi_taxid)
+			ncbiTaxEntry, err := taxCache.EntryForTaxId(ncbi_taxid)
 			if err != nil {
 				tx.Rollback()
 				return -1, err

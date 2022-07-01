@@ -24,8 +24,9 @@ type EntryModel interface {
 	GuessCategories(query *queries.Query) error
 	LookupContributors(ids []string) ([]data.Contributor, error)
 
-	Add(entry data.MibigEntry) error
+	Add(entry data.MibigEntry, taxCache *data.TaxonCache) error
 	InsertEntryStatus(status data.MibigEntryStatus) error
+	LoadTaxonEntry(name string, ncbi_taxid int64, taxCache *data.TaxonCache) error
 }
 
 type LiveEntryModel struct {
@@ -539,10 +540,14 @@ func (m *MockEntryModel) LookupContributors(ids []string) ([]data.Contributor, e
 	return nil, data.ErrNotImplemented
 }
 
-func (m *MockEntryModel) Add(entry data.MibigEntry) error {
+func (m *MockEntryModel) Add(entry data.MibigEntry, taxCache *data.TaxonCache) error {
 	return data.ErrNotImplemented
 }
 
 func (m *MockEntryModel) InsertEntryStatus(status data.MibigEntryStatus) error {
+	return data.ErrNotImplemented
+}
+
+func (m *MockEntryModel) LoadTaxonEntry(name string, ncbi_taxid int64, taxCache *data.TaxonCache) error {
 	return data.ErrNotImplemented
 }

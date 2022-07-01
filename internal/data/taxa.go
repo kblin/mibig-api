@@ -9,17 +9,37 @@ import (
 	"github.com/spf13/viper"
 )
 
+type TaxonCache struct {
+	DeprecatedIds map[int64]int64        `json:"deprecated_ids"`
+	Mappings      map[int64]NcbiTaxEntry `json:"mappings"`
+}
+
+func (t *TaxonCache) EntryForTaxId(taxId int64) (*NcbiTaxEntry, error) {
+	entry, found := t.Mappings[taxId]
+	if !found {
+		newTaxId, found := t.DeprecatedIds[taxId]
+		if !found {
+			return nil, ErrRecordNotFound
+		}
+		entry, found = t.Mappings[newTaxId]
+		if !found {
+			return nil, ErrRecordNotFound
+		}
+	}
+	return &entry, nil
+}
+
 type NcbiTaxEntry struct {
-	TaxId        int64
-	Name         string
-	Species      string
-	Genus        string
-	Family       string
-	Order        string
-	Class        string
-	Phylum       string
-	Kingdom      string
-	Superkingdom string
+	TaxId        int64  `json:"tax_id"`
+	Name         string `json:"name"`
+	Species      string `json:"species"`
+	Genus        string `json:"genus"`
+	Family       string `json:"family"`
+	Order        string `json:"order"`
+	Class        string `json:"class"`
+	Phylum       string `json:"phylum"`
+	Kingdom      string `json:"kingdom"`
+	Superkingdom string `json:"superkingdom"`
 }
 
 func EntryForTaxId(taxId int64) (*NcbiTaxEntry, error) {
