@@ -3,7 +3,8 @@ CREATE TYPE mibig.locus_evidence AS ENUM (
     'Gene expression correlated with compound production',
     'Knock-out studies',
     'Enzymatic assays',
-    'Heterologous expression'
+    'Heterologous expression',
+    'In vitro expression'
 );
 
 CREATE TYPE mibig.locus_completeness AS ENUM (
