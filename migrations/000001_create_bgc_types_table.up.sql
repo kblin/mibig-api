@@ -79,7 +79,8 @@ FROM (
         ('siderophore', 'Non-NRP siderophore', 'Non-NRP siderophore', 'other', 'other'),
         ('uridylpeptide', 'Uridylpeptide', 'Uridylpeptide', 'nrps', 'nrps'),
         ('trna_derived', 'tRNA-derived', 'tRNA-derived', 'other', 'other'),
-        ('phosphonate', 'Phosphonate', 'Phosphonate', 'other', 'other')
+        ('phosphonate', 'Phosphonate', 'Phosphonate', 'other', 'other'),
+        ('dikaritin', 'Dikaritin', 'Dikaritin', 'ripp', 'ripp')
     ) val ( term, name, description, parent_term, safe_class )
 LEFT JOIN mibig.bgc_types f ON val.parent_term = f.term;
 
