@@ -135,7 +135,7 @@ func insertEntry(entry data.MibigEntry, taxCache *data.TaxonCache, ctx context.C
 
 	statement := `INSERT INTO mibig.entries (
 		entry_id, minimal, tax_id, organism_name, biosyn_class, legacy_comment
-	) VALUES ($1, $2, $3, $4, $5, $6, $7)`
+	) VALUES ($1, $2, $3, $4, $5, $6)`
 
 	cluster := entry.Cluster
 
