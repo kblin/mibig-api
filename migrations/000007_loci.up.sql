@@ -20,7 +20,7 @@ CREATE TABLE IF NOT EXISTS mibig.loci (
     evidences mibig.locus_evidence[],
     start_coord int,
     end_coord int,
-    CHECK(start_coord < end_coord OR (start_coord = 0 AND end_coord = 0)),
+    CHECK(start_coord < end_coord OR (start_coord = 0 OR end_coord = 0)),
     mixs_compliant bool,
     entry_id text REFERENCES mibig.entries ON DELETE CASCADE
 );
