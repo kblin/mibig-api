@@ -16,13 +16,12 @@ limitations under the License.
 package cmd
 
 import (
-	"bytes"
 	"encoding/json"
 	"fmt"
 	"os"
-	"strings"
 
 	"github.com/spf13/cobra"
+	"github.com/spf13/viper"
 
 	"secondarymetabolites.org/mibig-api/internal/data"
 	"secondarymetabolites.org/mibig-api/internal/models"
@@ -73,9 +72,17 @@ JSON files are assumed to validate against the JSON schema.
 			panic(err)
 		}
 
-		Status := data.MibigEntryStatus{
-			EntryId: Entry.Cluster.MibigAccession,
-			Status:  status,
+		cacheFileName := viper.GetString("taxa.cache")
+
+		cacheBytes, err := os.ReadFile(cacheFileName)
+		if err != nil {
+			panic(err)
+		}
+
+		var taxonCache data.TaxonCache
+
+		if err = json.Unmarshal(cacheBytes, &taxonCache); err != nil {
+			panic(err)
 		}
 		db, err := InitDb()
 		if err != nil {
@@ -84,23 +91,10 @@ JSON files are assumed to validate against the JSON schema.
 
 		m := models.NewModels(db)
 
-		err = m.Entries.InsertEntryStatus(Status)
-		if err != nil {
-			panic(fmt.Errorf("error writing entry status: %s", err))
-		}
-
-		err = m.Entries.Add(Entry)
+		err = m.Entries.Add(Entry, &taxonCache)
 		if err != nil {
 			panic(fmt.Errorf("error writing entry %s %s to database: %s", Entry.Cluster.MibigAccession, Entry.Cluster.NcbiTaxId, err))
 		}
-
-		buf := new(bytes.Buffer)
-		encoder := json.NewEncoder(buf)
-		encoder.SetEscapeHTML(false)
-		encoder.SetIndent("", "    ")
-		encoder.Encode(Entry)
-
-		fmt.Printf("%s", strings.TrimSuffix(buf.String(), "\n"))
 
 	},
 }
