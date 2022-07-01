@@ -187,7 +187,8 @@ func (m *LiveEntryModel) Get(ids []string) ([]data.RepositoryEntry, error) {
 		a.entry_id,
 		a.minimal,
 		l.completeness AS complete,
-		array_cat(array_agg(DISTINCT c.name), synonyms) AS compounds,
+		array_agg(DISTINCT c.name) AS compounds,
+		array_agg(array_to_json(synonyms)) AS synonyms,
 		array_agg(DISTINCT safe_class || ':' || b.name ORDER BY safe_class || ':' || b.name) AS biosyn_class,
 		t.name
 	FROM ( SELECT * FROM unnest($1::text[]) AS entry_id) vals
@@ -197,7 +198,7 @@ func (m *LiveEntryModel) Get(ids []string) ([]data.RepositoryEntry, error) {
 	JOIN mibig.chem_compounds c USING (entry_id)
 	JOIN mibig.taxa t USING (tax_id)
 	JOIN mibig.loci l USING (entry_id)
-	GROUP BY a.entry_id, minimal, complete, synonyms, t.name
+	GROUP BY a.entry_id, minimal, complete, t.name
 	ORDER BY a.entry_id`
 
 	rows, err := m.DB.Query(statement, pq.Array(ids))
