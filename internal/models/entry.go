@@ -240,7 +240,7 @@ var statementByCategory = map[string]string{
 	UNION
 		SELECT r.bgc_type_id, r.parent_id FROM mibig.bgc_types r INNER JOIN all_subtypes s ON s.bgc_type_id = r.parent_id)
 	SELECT bgc_type_id FROM all_subtypes)`,
-	"compound":     `SELECT entry_id FROM mibig.compounds WHERE name ILIKE $1`,
+	"compound":     `SELECT entry_id FROM mibig.chem_compounds WHERE name ILIKE $1`,
 	"acc":          `SELECT entry_id FROM mibig.entries WHERE entry_id ILIKE $1`,
 	"superkingdom": `SELECT entry_id FROM mibig.entries LEFT JOIN mibig.taxa USING (tax_id) WHERE superkingdom ILIKE $1`,
 	"kingdom":      `SELECT entry_id FROM mibig.entries LEFT JOIN mibig.taxa USING (tax_id) WHERE kingdom ILIKE $1`,
@@ -316,7 +316,7 @@ func (m *LiveEntryModel) Search(t queries.QueryTerm) ([]string, error) {
 
 var availableByCategory = map[string]string{
 	"type":         `SELECT DISTINCT(term), description FROM mibig.bgc_types WHERE term ILIKE concat($1::text, '%') OR description ILIKE concat($1::text, '%') ORDER BY term`,
-	"compound":     `SELECT DISTINCT(name), name FROM mibig.compounds WHERE name ILIKE concat($1::text, '%')`,
+	"compound":     `SELECT DISTINCT(name), name FROM mibig.chem_compounds WHERE name ILIKE concat($1::text, '%')`,
 	"acc":          `SELECT DISTINCT(entry_id), entry_id FROM mibig.entries WHERE entry_id ILIKE concat('%', $1::text, '%')`,
 	"superkingdom": `SELECT DISTINCT(superkingdom), superkingdom FROM mibig.taxa WHERE superkingdom ILIKE concat('%', $1::text, '%')`,
 	"kingdom":      `SELECT DISTINCT(kingdom), kingdom FROM mibig.taxa WHERE kingdom ILIKE concat('%', $1::text, '%')`,
