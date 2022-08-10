@@ -312,9 +312,12 @@ type Cluster struct {
 	OrganismName        string              `json:"organism_name"`
 	Other               *Other              `json:"other,omitempty"`
 	Polyketide          *Polyketide         `json:"polyketide,omitempty"`
-	Publications        []Publication       `json:"publications"`
+	Publications        []Publication       `json:"publications,omitempty"`
+	RetirementReasons   []string            `json:"retirement_reasons,omitempty"`
 	RiPP                *RiPP               `json:"ripp,omitempty"`
 	Saccharide          *Saccharide         `json:"saccharide,omitempty"`
+	SeeAlso             []string            `json:"see_also,omitempty"`
+	Status              string              `json:"status"`
 	Terpene             *Terpene            `json:"terpene,omitempty"`
 }
 

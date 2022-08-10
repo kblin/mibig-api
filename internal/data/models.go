@@ -27,6 +27,9 @@ type StatCounts struct {
 	Minimal    int `json:"minimal"`
 	Complete   int `json:"complete"`
 	Incomplete int `json:"incomplete"`
+	Pending    int `json:"pending"`
+	Active     int `json:"active"`
+	Retired    int `json:"retired"`
 }
 
 type TaxonStats struct {
@@ -54,6 +57,7 @@ type RepositoryEntry struct {
 	Accession    string       `json:"accession"`
 	Minimal      bool         `json:"minimal"`
 	Complete     string       `json:"complete"`
+	Status       string       `json:"status"`
 	Products     []Product    `json:"products"`
 	ProductTags  []ProductTag `json:"classes"`
 	OrganismName string       `json:"organism"`

@@ -59,28 +59,6 @@ func (m *LiveEntryModel) Add(entry data.MibigEntry, taxCache *data.TaxonCache) e
 	return tx.Commit()
 }
 
-func (m LiveEntryModel) InsertEntryStatus(status data.MibigEntryStatus) error {
-	query := `INSERT INTO mibig.entry_status (entry_id, status, reason, see)
-	VALUES ($1, $2, $3, $4)`
-
-	args := []interface{}{
-		status.EntryId,
-		status.Status,
-		status.Reason,
-		pq.Array(status.See),
-	}
-
-	ctx, cancel := context.WithTimeout(context.Background(), DEFAULT_DB_TIMEOUT)
-	defer cancel()
-
-	_, err := m.DB.ExecContext(ctx, query, args...)
-	if err != nil {
-		return err
-	}
-
-	return nil
-}
-
 func (m LiveEntryModel) LoadTaxonEntry(name string, ncbi_taxid int64, taxCache *data.TaxonCache) error {
 	ctx := context.Background()
 	tx, err := m.DB.BeginTx(ctx, nil)
@@ -134,8 +112,8 @@ func insertEntry(entry data.MibigEntry, taxCache *data.TaxonCache, ctx context.C
 	}
 
 	statement := `INSERT INTO mibig.entries (
-		entry_id, minimal, tax_id, organism_name, biosyn_class, legacy_comment
-	) VALUES ($1, $2, $3, $4, $5, $6)`
+		entry_id, minimal, tax_id, organism_name, biosyn_class, status, retirement_reason, see_also, legacy_comment
+	) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9)`
 
 	cluster := entry.Cluster
 
@@ -145,6 +123,9 @@ func insertEntry(entry data.MibigEntry, taxCache *data.TaxonCache, ctx context.C
 		tax_id,
 		cluster.OrganismName,
 		pq.Array(cluster.BiosyntheticClasses),
+		cluster.Status,
+		pq.Array(cluster.RetirementReasons),
+		pq.Array(cluster.SeeAlso),
 		entry.Comments,
 	}
 

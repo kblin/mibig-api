@@ -25,7 +25,6 @@ type EntryModel interface {
 	LookupContributors(ids []string) ([]data.Contributor, error)
 
 	Add(entry data.MibigEntry, taxCache *data.TaxonCache) error
-	InsertEntryStatus(status data.MibigEntryStatus) error
 	LoadTaxonEntry(name string, ncbi_taxid int64, taxCache *data.TaxonCache) error
 }
 
@@ -42,6 +41,9 @@ func (m *LiveEntryModel) Counts() (*data.StatCounts, error) {
 	stmt_minimal := `SELECT COUNT(entry_id) FROM mibig.entries WHERE minimal = TRUE`
 	stmt_complete := `SELECT COUNT(entry_id) FROM mibig.entries LEFT JOIN mibig.loci USING (entry_id) WHERE completeness = 'complete'`
 	stmt_incomplete := `SELECT COUNT(entry_id) FROM mibig.entries LEFT JOIN mibig.loci USING (entry_id) WHERE completeness = 'incomplete'`
+	stmt_pending := `SELECT COUNT(entry_id) FROM mibig.entries WHERE status = 'pending'`
+	stmt_active := `SELECT COUNT(entry_id) FROM mibig.entries WHERE status = 'active'`
+	stmt_retired := `SELECT COUNT(entry_id) FROM mibig.entries WHERE status = 'retired'`
 	var counts data.StatCounts
 
 	err := m.DB.QueryRow(stmt_total).Scan(&counts.Total)
@@ -64,6 +66,20 @@ func (m *LiveEntryModel) Counts() (*data.StatCounts, error) {
 		return nil, err
 	}
 
+	err = m.DB.QueryRow(stmt_pending).Scan(&counts.Pending)
+	if err != nil {
+		return nil, err
+	}
+
+	err = m.DB.QueryRow(stmt_active).Scan(&counts.Active)
+	if err != nil {
+		return nil, err
+	}
+
+	err = m.DB.QueryRow(stmt_retired).Scan(&counts.Retired)
+	if err != nil {
+		return nil, err
+	}
 	return &counts, nil
 }
 
@@ -120,6 +136,7 @@ func (m *LiveEntryModel) Repository() ([]data.RepositoryEntry, error) {
 		a.entry_id,
 		a.minimal,
 		l.completeness AS complete,
+		a.status,
 		array_agg(DISTINCT c.name) AS compounds,
 		array_agg(array_to_json(synonyms)) AS synonyms,
 		array_agg(DISTINCT safe_class || ':' || b.name ORDER BY safe_class || ':' || b.name) AS biosyn_class,
@@ -153,7 +170,8 @@ func parseRepositoryEntriesFromDB(rows *sql.Rows) ([]data.RepositoryEntry, error
 		)
 
 		entry := data.RepositoryEntry{}
-		if err := rows.Scan(&entry.Accession, &entry.Minimal, &entry.Complete, pq.Array(&product_names),
+		if err := rows.Scan(&entry.Accession, &entry.Minimal, &entry.Complete, &entry.Status,
+			pq.Array(&product_names),
 			pq.Array(&product_synonyms), pq.Array(&class_and_css), &entry.OrganismName); err != nil {
 			return nil, err
 		}
@@ -188,6 +206,7 @@ func (m *LiveEntryModel) Get(ids []string) ([]data.RepositoryEntry, error) {
 		a.entry_id,
 		a.minimal,
 		l.completeness AS complete,
+		a.status,
 		array_agg(DISTINCT c.name) AS compounds,
 		array_agg(array_to_json(synonyms)) AS synonyms,
 		array_agg(DISTINCT safe_class || ':' || b.name ORDER BY safe_class || ':' || b.name) AS biosyn_class,
@@ -541,10 +560,6 @@ func (m *MockEntryModel) LookupContributors(ids []string) ([]data.Contributor, e
 }
 
 func (m *MockEntryModel) Add(entry data.MibigEntry, taxCache *data.TaxonCache) error {
-	return data.ErrNotImplemented
-}
-
-func (m *MockEntryModel) InsertEntryStatus(status data.MibigEntryStatus) error {
 	return data.ErrNotImplemented
 }
 
