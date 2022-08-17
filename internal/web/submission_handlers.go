@@ -1,30 +1,25 @@
 package web
 
-/*
 import (
-	"encoding/json"
 	"fmt"
-	"github.com/gin-gonic/gin"
 	"net/http"
-	"secondarymetabolites.org/mibig-api/pkg/models"
-	"strconv"
 	"strings"
-	"time"
+
+	"github.com/gin-gonic/gin"
+	"github.com/spf13/viper"
+
+	"secondarymetabolites.org/mibig-api/internal/data"
 )
 
 func (app *application) submit(c *gin.Context) {
-	var req models.AccessionRequest
+	var req data.AccessionRequest
 	c.BindJSON(&req)
 
-	if err := app.Mail.Send(req.Email, generateRequestMailBody(&req, app.Mail.Config().Recipient)); err != nil {
-		app.serverError(c, err)
+	if req.Name == "" || req.Email == "" || len(req.Compounds) == 0 || len(req.Loci) == 0 {
+		c.JSON(400, gin.H{"error": true, "message": "Missing form elements"})
 		return
 	}
 
-	c.String(http.StatusAccepted, "")
-}
-
-func generateRequestMailBody(req *models.AccessionRequest, recipient string) []byte {
 	compound := strings.Join(req.Compounds, ", ")
 	var loci_parts []string
 	for _, locus := range req.Loci {
@@ -32,10 +27,22 @@ func generateRequestMailBody(req *models.AccessionRequest, recipient string) []b
 	}
 	loci := strings.Join(loci_parts, "\n")
 
-	return []byte(fmt.Sprintf("From: %s\r\nTo: %s\r\nSubject: MIBiG update / request\r\n\r\nName: %s\nEmail: %s\nCompound: %s\nLoci:\n%s",
-		req.Email, recipient, req.Name, req.Email, compound, loci))
+	email_data := struct {
+		Name     string
+		Email    string
+		Compound string
+		Loci     string
+	}{req.Name, req.Email, compound, loci}
+
+	if err := app.Mail.SendFromTemplate(viper.GetString("mail.recipient"), "accession_request.tmpl", email_data); err != nil {
+		app.serverError(c, err)
+		return
+	}
+
+	c.String(http.StatusAccepted, "")
 }
 
+/*
 func (app *application) LegacyStoreSubmission(c *gin.Context) {
 	mibigJson := c.PostForm("json")
 	versionString := c.PostForm("version")
