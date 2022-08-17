@@ -8,6 +8,7 @@ import (
 	"time"
 
 	"github.com/go-mail/mail/v2"
+	"github.com/google/uuid"
 )
 
 //go:embed "templates"
@@ -116,6 +117,7 @@ func prepareTemplateMessage(sender, recipient, templateFile string, data interfa
 	msg.SetHeader("Subject", subject.String())
 	msg.SetBody("text/plain", plainBody.String())
 	msg.AddAlternative("text/html", htmlBody.String())
+	msg.SetHeader("Message-ID", uuid.New().String())
 
 	return msg, nil
 }
