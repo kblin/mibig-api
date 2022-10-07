@@ -57,19 +57,24 @@ type ChemMoiety struct {
 	Subcluster []string `json:"subcluster,omitempty"` // TODO: link to gene names from cluster?
 }
 
+type ChemActivity struct {
+	Activity string `json:"activity"`
+	Comment  string `json:"comment"`
+}
+
 // Sorted in order of the appearance in the JSON spec
 type ChemCompound struct {
-	ChemActivities   []string     `json:"chem_acts,omitempty"`
-	ChemMoieties     []ChemMoiety `json:"chem_moieties,omitempty"`
-	ChemStructure    string       `json:"chem_struct,omitempty"`
-	Synonyms         []string     `json:"chem_synonyms,omitempty"`
-	ChemTargets      []ChemTarget `json:"chem_targets,omitempty"`
-	Name             string       `json:"compound"`
-	DatabaseIds      []string     `json:"database_id,omitempty"`
-	Evidence         []string     `json:"evidence,omitempty"`
-	MassSpecIonType  string       `json:"mass_spec_ion_type,omitempty"`
-	MolecularMass    float64      `json:"mol_mass,omitempty"`
-	MolecularFormula string       `json:"molecular_formula,omitempty"`
+	ChemActivities   []ChemActivity `json:"chem_acts,omitempty"`
+	ChemMoieties     []ChemMoiety   `json:"chem_moieties,omitempty"`
+	ChemStructure    string         `json:"chem_struct,omitempty"`
+	Synonyms         []string       `json:"chem_synonyms,omitempty"`
+	ChemTargets      []ChemTarget   `json:"chem_targets,omitempty"`
+	Name             string         `json:"compound"`
+	DatabaseIds      []string       `json:"database_id,omitempty"`
+	Evidence         []string       `json:"evidence,omitempty"`
+	MassSpecIonType  string         `json:"mass_spec_ion_type,omitempty"`
+	MolecularMass    float64        `json:"mol_mass,omitempty"`
+	MolecularFormula string         `json:"molecular_formula,omitempty"`
 }
 
 type Loci struct {
