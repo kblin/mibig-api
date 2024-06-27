@@ -8,8 +8,7 @@ cluster (MIBiG)](http://mibig.secondarymetabolites.org/) repository.
 Developing
 ----------
 
-Make sure you have a recent version of Go (1.11.x), as the dependency handling
-requires that.
+Make sure you have a recent version of Go (1.22.x).
 
 License
 -------
