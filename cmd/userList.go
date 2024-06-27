@@ -1,5 +1,5 @@
 /*
-Copyright © 2020 Kai Blin <kblin@biosustain.dtu.dk>
+Copyright © 2020 Technical University of Denmark - written by Kai Blin <kblin@biosustain.dtu.dk>
 
 Licensed under the Apache License, Version 2.0 (the "License");
 you may not use this file except in compliance with the License.
