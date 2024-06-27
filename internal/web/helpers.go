@@ -44,8 +44,8 @@ func (app *application) notPermitted(c *gin.Context) {
 	app.clientErrorWithMessage(c, http.StatusUnauthorized, message)
 }
 
-func (app *application) GetCurrentUser(c *gin.Context) *data.Submitter {
-	return c.MustGet("user").(*data.Submitter)
+func (app *application) GetCurrentUser(c *gin.Context) *data.User {
+	return c.MustGet("user").(*data.User)
 }
 
 func (app *application) background(fn func()) {

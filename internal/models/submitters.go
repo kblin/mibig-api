@@ -15,47 +15,47 @@ import (
 	"secondarymetabolites.org/mibig-api/internal/utils"
 )
 
-type SubmitterModel interface {
+type UserModel interface {
 	Ping() error
-	Insert(submitter *data.Submitter, password string) error
+	Insert(user *data.User, password string) error
 	GetRolesById(role_ids []int64) ([]data.Role, error)
 	GetRolesByName(role_names []string) ([]data.Role, error)
-	Get(email string, active_only bool) (*data.Submitter, error)
-	Authenticate(email, password string) (*data.Submitter, error)
+	Get(email string, active_only bool) (*data.User, error)
+	Authenticate(email, password string) (*data.User, error)
 	ChangePassword(userId string, password string) error
-	Update(submitter *data.Submitter, password string) error
-	List() ([]data.Submitter, error)
+	Update(user *data.User, password string) error
+	List() ([]data.User, error)
 	Delete(email string) error
-	GetForToken(tokenScope, tokenPlaintext string) (*data.Submitter, error)
+	GetForToken(tokenScope, tokenPlaintext string) (*data.User, error)
 }
 
-type LiveSubmitterModel struct {
+type LiveUserModel struct {
 	DB            *sql.DB
 	roleIdCache   map[int64]*data.Role
 	roleNameCache map[string]*data.Role
 }
 
-func NewSubmitterModel(DB *sql.DB) *LiveSubmitterModel {
-	return &LiveSubmitterModel{
+func NewUserModel(DB *sql.DB) *LiveUserModel {
+	return &LiveUserModel{
 		DB:            DB,
 		roleIdCache:   make(map[int64]*data.Role, 5),
 		roleNameCache: make(map[string]*data.Role, 5),
 	}
 }
 
-func (m *LiveSubmitterModel) Ping() error {
+func (m *LiveUserModel) Ping() error {
 	return m.DB.Ping()
 }
 
-func (m *LiveSubmitterModel) Insert(submitter *data.Submitter, password string) error {
+func (m *LiveUserModel) Insert(user *data.User, password string) error {
 	var err error
-	submitter.PasswordHash, err = utils.GeneratePassword(password)
+	user.PasswordHash, err = utils.GeneratePassword(password)
 	if err != nil {
 		return err
 	}
 
-	if submitter.Id == "" {
-		submitter.Id, err = utils.GenerateUid(15)
+	if user.Id == "" {
+		user.Id, err = utils.GenerateUid(15)
 		if err != nil {
 			return err
 		}
@@ -70,8 +70,8 @@ func (m *LiveSubmitterModel) Insert(submitter *data.Submitter, password string) 
 (user_id, email, name, call_name, institution, password_hash, is_public, gdpr_consent, active)
 VALUES
 ($1, $2, $3, $4, $5, $6, $7, $8, $9)`
-	_, err = tx.Exec(statement, submitter.Id, submitter.Email, submitter.Name, submitter.CallName,
-		submitter.Institution, submitter.PasswordHash, submitter.Public, submitter.GDPRConsent, submitter.Active)
+	_, err = tx.Exec(statement, user.Id, user.Email, user.Name, user.CallName,
+		user.Institution, user.PasswordHash, user.Public, user.GDPRConsent, user.Active)
 	if err != nil {
 		tx.Rollback()
 		switch {
@@ -82,8 +82,8 @@ VALUES
 		}
 	}
 
-	for _, role := range submitter.Roles {
-		_, err = tx.Exec("INSERT INTO mibig_submitters.rel_submitters_roles VALUES($1, $2)", submitter.Id, role.Id)
+	for _, role := range user.Roles {
+		_, err = tx.Exec("INSERT INTO mibig_submitters.rel_submitters_roles VALUES($1, $2)", user.Id, role.Id)
 		if err != nil {
 			tx.Rollback()
 			return err
@@ -97,7 +97,7 @@ VALUES
 	return nil
 }
 
-func (m *LiveSubmitterModel) GetRolesById(role_ids []int64) ([]data.Role, error) {
+func (m *LiveUserModel) GetRolesById(role_ids []int64) ([]data.Role, error) {
 	var roles []data.Role
 
 	for _, id := range role_ids {
@@ -118,7 +118,7 @@ func (m *LiveSubmitterModel) GetRolesById(role_ids []int64) ([]data.Role, error)
 	return roles, nil
 }
 
-func (m *LiveSubmitterModel) GetRolesByName(role_names []string) ([]data.Role, error) {
+func (m *LiveUserModel) GetRolesByName(role_names []string) ([]data.Role, error) {
 	var roles []data.Role
 
 	for _, name := range role_names {
@@ -139,8 +139,8 @@ func (m *LiveSubmitterModel) GetRolesByName(role_names []string) ([]data.Role, e
 	return roles, nil
 }
 
-func (m *LiveSubmitterModel) Get(email string, active_only bool) (*data.Submitter, error) {
-	var submitter data.Submitter
+func (m *LiveUserModel) Get(email string, active_only bool) (*data.User, error) {
+	var user data.User
 	statement := `SELECT u.user_id, u.email, u.name, u.call_name, u.institution, u.password_hash, u.is_public, u.gdpr_consent, u.active, u.version, array_agg(role_id) AS role_ids 
 FROM mibig_submitters.submitters AS u
 LEFT JOIN mibig_submitters.rel_submitters_roles USING (user_id)
@@ -156,8 +156,8 @@ WHERE u.email = $1`
 	)
 
 	row := m.DB.QueryRow(statement, email)
-	err := row.Scan(&submitter.Id, &submitter.Email, &submitter.Name, &submitter.CallName, &submitter.Institution,
-		&submitter.PasswordHash, &submitter.Public, &submitter.GDPRConsent, &submitter.Active, &submitter.Version,
+	err := row.Scan(&user.Id, &user.Email, &user.Name, &user.CallName, &user.Institution,
+		&user.PasswordHash, &user.Public, &user.GDPRConsent, &user.Active, &user.Version,
 		pq.Array(&role_ids_or_null))
 	if err != nil {
 		return nil, err
@@ -175,17 +175,17 @@ WHERE u.email = $1`
 		role_ids = append(role_ids, role_id)
 	}
 
-	submitter.Roles, err = m.GetRolesById(role_ids)
+	user.Roles, err = m.GetRolesById(role_ids)
 	if err != nil {
 		return nil, err
 	}
 
-	return &submitter, nil
+	return &user, nil
 }
 
-func (m *LiveSubmitterModel) Authenticate(email, password string) (*data.Submitter, error) {
+func (m *LiveUserModel) Authenticate(email, password string) (*data.User, error) {
 
-	submitter, err := m.Get(email, true)
+	user, err := m.Get(email, true)
 	if err != nil {
 		if errors.Is(err, sql.ErrNoRows) {
 			return nil, data.ErrInvalidCredentials
@@ -194,7 +194,7 @@ func (m *LiveSubmitterModel) Authenticate(email, password string) (*data.Submitt
 		}
 	}
 
-	err = bcrypt.CompareHashAndPassword(submitter.PasswordHash, []byte(password))
+	err = bcrypt.CompareHashAndPassword(user.PasswordHash, []byte(password))
 	if err != nil {
 		if errors.Is(err, bcrypt.ErrMismatchedHashAndPassword) {
 			return nil, data.ErrInvalidCredentials
@@ -203,10 +203,10 @@ func (m *LiveSubmitterModel) Authenticate(email, password string) (*data.Submitt
 		}
 	}
 
-	return submitter, nil
+	return user, nil
 }
 
-func (m *LiveSubmitterModel) ChangePassword(userId string, password string) error {
+func (m *LiveUserModel) ChangePassword(userId string, password string) error {
 	hashedPassword, err := bcrypt.GenerateFromPassword([]byte(password), 12)
 	if err != nil {
 		return err
@@ -220,7 +220,7 @@ func (m *LiveSubmitterModel) ChangePassword(userId string, password string) erro
 	return nil
 }
 
-func (m *LiveSubmitterModel) Update(submitter *data.Submitter, password string) error {
+func (m *LiveUserModel) Update(user *data.User, password string) error {
 	tx, err := m.DB.Begin()
 	if err != nil {
 		log.Println("Error starting TX", err.Error())
@@ -228,14 +228,14 @@ func (m *LiveSubmitterModel) Update(submitter *data.Submitter, password string) 
 	}
 
 	if password == "" {
-		row := tx.QueryRow(`SELECT password_hash FROM mibig_submitters.submitters WHERE user_id = $1`, submitter.Id)
-		err = row.Scan(&submitter.PasswordHash)
+		row := tx.QueryRow(`SELECT password_hash FROM mibig_submitters.submitters WHERE user_id = $1`, user.Id)
+		err = row.Scan(&user.PasswordHash)
 		if err != nil {
 			log.Println("Error getting hashed password", err.Error())
 			return err
 		}
 	} else {
-		submitter.PasswordHash, err = utils.GeneratePassword(password)
+		user.PasswordHash, err = utils.GeneratePassword(password)
 		if err != nil {
 			return err
 		}
@@ -246,16 +246,16 @@ email = $1, name = $2, call_name = $3, password_hash = $4, institution = $5, is_
 WHERE user_id = $9 AND version = $10`
 
 	args := []interface{}{
-		submitter.Email,
-		submitter.Name,
-		submitter.CallName,
-		submitter.PasswordHash,
-		submitter.Institution,
-		submitter.Public,
-		submitter.GDPRConsent,
-		submitter.Active,
-		submitter.Id,
-		submitter.Version,
+		user.Email,
+		user.Name,
+		user.CallName,
+		user.PasswordHash,
+		user.Institution,
+		user.Public,
+		user.GDPRConsent,
+		user.Active,
+		user.Id,
+		user.Version,
 	}
 	_, err = tx.Exec(statement, args...)
 	if err != nil {
@@ -266,18 +266,18 @@ WHERE user_id = $9 AND version = $10`
 		case errors.Is(err, sql.ErrNoRows):
 			return data.ErrEditConflict
 		default:
-			log.Println("Error updating user", submitter.Id, err.Error())
+			log.Println("Error updating user", user.Id, err.Error())
 		}
 		return err
 	}
 
-	existing_roles, err := getExistingRoles(tx, submitter.Id)
+	existing_roles, err := getExistingRoles(tx, user.Id)
 	if err != nil {
 		tx.Rollback()
 		return err
 	}
 
-	wanted_roles, err := getWantedRoles(tx, submitter.Roles)
+	wanted_roles, err := getWantedRoles(tx, user.Roles)
 	if err != nil {
 		tx.Rollback()
 		return err
@@ -287,7 +287,7 @@ WHERE user_id = $9 AND version = $10`
 	to_add := utils.DifferenceInt(wanted_roles, existing_roles)
 
 	for _, roleId := range to_delete {
-		_, err = tx.Exec("DELETE FROM mibig_submitters.rel_submitters_roles WHERE user_id = $1 AND role_id = $2", submitter.Id, roleId)
+		_, err = tx.Exec("DELETE FROM mibig_submitters.rel_submitters_roles WHERE user_id = $1 AND role_id = $2", user.Id, roleId)
 		if err != nil {
 			tx.Rollback()
 			log.Println("Error deleting roles", err.Error())
@@ -296,7 +296,7 @@ WHERE user_id = $9 AND version = $10`
 	}
 
 	for _, roleId := range to_add {
-		_, err = tx.Exec("INSERT INTO mibig_submitters.rel_submitters_roles VALUES($1, $2)", submitter.Id, roleId)
+		_, err = tx.Exec("INSERT INTO mibig_submitters.rel_submitters_roles VALUES($1, $2)", user.Id, roleId)
 		if err != nil {
 			tx.Rollback()
 			log.Println("Error adding roles", err.Error())
@@ -343,8 +343,8 @@ func getWantedRoles(tx *sql.Tx, roles []data.Role) ([]int, error) {
 	return wanted_roles, nil
 }
 
-func (m *LiveSubmitterModel) List() ([]data.Submitter, error) {
-	var submitters []data.Submitter
+func (m *LiveUserModel) List() ([]data.User, error) {
+	var users []data.User
 	statement := `SELECT u.user_id, u.email, u.name, u.call_name, u.institution, u.password_hash, u.is_public, u.gdpr_consent, u.active, array_agg(role_id) AS role_ids 
 FROM mibig_submitters.submitters AS u
 LEFT JOIN mibig_submitters.rel_submitters_roles USING (user_id)
@@ -353,14 +353,14 @@ GROUP BY user_id ORDER BY user_id`
 	if err != nil {
 		// No users is not an error in this context
 		if errors.Is(err, sql.ErrNoRows) {
-			return submitters, nil
+			return users, nil
 		}
 		return nil, err
 	}
 	defer rows.Close()
 
 	for rows.Next() {
-		var submitter data.Submitter
+		var submitter data.User
 		var (
 			role_ids_or_null []sql.NullInt64
 			role_ids         []int64
@@ -389,13 +389,13 @@ GROUP BY user_id ORDER BY user_id`
 			return nil, err
 		}
 
-		submitters = append(submitters, submitter)
+		users = append(users, submitter)
 	}
 
-	return submitters, nil
+	return users, nil
 }
 
-func (m *LiveSubmitterModel) Delete(email string) error {
+func (m *LiveUserModel) Delete(email string) error {
 	tx, err := m.DB.Begin()
 	if err != nil {
 		return err
@@ -429,7 +429,7 @@ func (m *LiveSubmitterModel) Delete(email string) error {
 	return nil
 }
 
-func (m *LiveSubmitterModel) GetForToken(tokenScope, tokenPlaintext string) (*data.Submitter, error) {
+func (m *LiveUserModel) GetForToken(tokenScope, tokenPlaintext string) (*data.User, error) {
 	tokenHash := sha256.Sum256([]byte(tokenPlaintext))
 
 	query := `
@@ -442,7 +442,7 @@ func (m *LiveSubmitterModel) GetForToken(tokenScope, tokenPlaintext string) (*da
 	`
 
 	var (
-		submitter        data.Submitter
+		user             data.User
 		role_ids_or_null []sql.NullInt64
 		role_ids         []int64
 	)
@@ -453,16 +453,16 @@ func (m *LiveSubmitterModel) GetForToken(tokenScope, tokenPlaintext string) (*da
 	defer cancel()
 
 	err := m.DB.QueryRowContext(ctx, query, args...).Scan(
-		&submitter.Id,
-		&submitter.Email,
-		&submitter.Name,
-		&submitter.CallName,
-		&submitter.Institution,
-		&submitter.PasswordHash,
-		&submitter.Public,
-		&submitter.GDPRConsent,
-		&submitter.Active,
-		&submitter.Version,
+		&user.Id,
+		&user.Email,
+		&user.Name,
+		&user.CallName,
+		&user.Institution,
+		&user.PasswordHash,
+		&user.Public,
+		&user.GDPRConsent,
+		&user.Active,
+		&user.Version,
 		pq.Array(&role_ids_or_null))
 	if err != nil {
 		switch {
@@ -485,61 +485,10 @@ func (m *LiveSubmitterModel) GetForToken(tokenScope, tokenPlaintext string) (*da
 		role_ids = append(role_ids, role_id)
 	}
 
-	submitter.Roles, err = m.GetRolesById(role_ids)
+	user.Roles, err = m.GetRolesById(role_ids)
 	if err != nil {
 		return nil, err
 	}
 
-	return &submitter, nil
-}
-
-type MockSubmitterModel struct {
-}
-
-func NewMockSubmitterModel() *MockSubmitterModel {
-	return &MockSubmitterModel{}
-}
-
-func (m *MockSubmitterModel) Ping() error {
-	return nil
-}
-
-func (m *MockSubmitterModel) Insert(submitter *data.Submitter, password string) error {
-	return data.ErrNotImplemented
-}
-
-func (m *MockSubmitterModel) GetRolesById(role_ids []int64) ([]data.Role, error) {
-	return nil, data.ErrNotImplemented
-}
-
-func (m *MockSubmitterModel) GetRolesByName(role_names []string) ([]data.Role, error) {
-	return nil, data.ErrNotImplemented
-}
-
-func (m *MockSubmitterModel) Get(email string, active_only bool) (*data.Submitter, error) {
-	return nil, data.ErrNotImplemented
-}
-
-func (m *MockSubmitterModel) Authenticate(email, password string) (*data.Submitter, error) {
-	return nil, data.ErrNotImplemented
-}
-
-func (m *MockSubmitterModel) ChangePassword(userId string, password string) error {
-	return data.ErrNotImplemented
-}
-
-func (m *MockSubmitterModel) Update(submitter *data.Submitter, password string) error {
-	return data.ErrNotImplemented
-}
-
-func (m *MockSubmitterModel) List() ([]data.Submitter, error) {
-	return nil, data.ErrNotImplemented
-}
-
-func (m *MockSubmitterModel) Delete(email string) error {
-	return data.ErrNotImplemented
-}
-
-func (m *MockSubmitterModel) GetForToken(tokenScope, tokenPlaintext string) (*data.Submitter, error) {
-	return nil, data.ErrNotImplemented
+	return &user, nil
 }

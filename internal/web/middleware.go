@@ -16,7 +16,7 @@ func (app *application) Authenticate() gin.HandlerFunc {
 		// Let caches know that the response will vary depending on the Authorization header
 		c.Writer.Header().Add("Vary", "Authorization")
 
-		var user *data.Submitter
+		var user *data.User
 
 		token, err := getToken(c)
 		if err != nil {

@@ -1,8 +1,8 @@
 package data
 
-var AnonymousUser = &Submitter{CallName: "Anonymous"}
+var AnonymousUser = &User{CallName: "Anonymous"}
 
-type Submitter struct {
+type User struct {
 	Id           string `json:"id"`
 	Email        string `json:"email"`
 	Name         string `json:"name"`
@@ -16,7 +16,7 @@ type Submitter struct {
 	Version      int    `json:"-"`
 }
 
-func (u *Submitter) IsAnonymous() bool {
+func (u *User) IsAnonymous() bool {
 	return u == AnonymousUser
 }
 

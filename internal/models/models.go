@@ -5,7 +5,7 @@ import "database/sql"
 type Models struct {
 	Entries    EntryModel
 	Roles      RoleModel
-	Submitters SubmitterModel
+	Submitters UserModel
 	Tokens     TokenModel
 }
 
@@ -13,16 +13,15 @@ func NewModels(db *sql.DB) Models {
 	return Models{
 		Entries:    NewEntryModel(db),
 		Roles:      NewRoleModel(db),
-		Submitters: NewSubmitterModel(db),
+		Submitters: NewUserModel(db),
 		Tokens:     NewTokenModel(db),
 	}
 }
 
 func NewMockModes(tokenScopes []string) Models {
 	return Models{
-		Entries:    NewMockEntryModel(),
-		Roles:      NewMockRoleModel(),
-		Submitters: NewMockSubmitterModel(),
-		Tokens:     NewMockTokenModel(tokenScopes),
+		Entries: NewMockEntryModel(),
+		Roles:   NewMockRoleModel(),
+		Tokens:  NewMockTokenModel(tokenScopes),
 	}
 }

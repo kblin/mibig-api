@@ -15,7 +15,7 @@ import (
 )
 
 type SubmitterModelTest struct {
-	m        *LiveSubmitterModel
+	m        *LiveUserModel
 	Teardown func()
 }
 
@@ -54,7 +54,7 @@ func newSubmitterTestDB(t *testing.T) *SubmitterModelTest {
 		migration.Down()
 		t.Fatal(err)
 	}
-	mt.m = NewSubmitterModel(db)
+	mt.m = NewUserModel(db)
 
 	mt.Teardown = func() {
 		migration.Down()
@@ -134,7 +134,7 @@ func (mt *SubmitterModelTest) Insert(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	submitter := data.Submitter{
+	submitter := data.User{
 		Email:       "eve@example.org",
 		Name:        "Eve User",
 		CallName:    "Eve",
@@ -156,7 +156,7 @@ func (mt *SubmitterModelTest) Insert(t *testing.T) {
 }
 
 func (mt *SubmitterModelTest) Get(t *testing.T) {
-	expected := &data.Submitter{
+	expected := &data.User{
 		Id:           "AAAAAAAAAAAAAAAAAAAAAAAB",
 		Email:        "alice@example.org",
 		Name:         "Alice User",
@@ -185,7 +185,7 @@ func (mt *SubmitterModelTest) Authenticate(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	expected := &data.Submitter{
+	expected := &data.User{
 		Id:           eve.Id,
 		Email:        "eve@example.org",
 		Name:         "Eve User",

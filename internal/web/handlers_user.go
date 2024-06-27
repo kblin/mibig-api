@@ -73,7 +73,7 @@ func (app *application) Register(c *gin.Context) {
 		return
 	}
 
-	user := &data.Submitter{
+	user := &data.User{
 		Email:       input.Email,
 		Name:        input.Name,
 		CallName:    input.CallName,
