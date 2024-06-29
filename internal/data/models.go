@@ -9,10 +9,17 @@ import (
 type JsonData map[string]interface{}
 
 type Entry struct {
-	ID    int      `db:"entry_id"`
-	Acc   string   `db:"acc"`
-	TaxID int      `db:"tax_id"`
-	Data  JsonData `db:"data"`
+	ID                string   `db:"entry_id"`
+	Accession         string   `db:"accession"`
+	Version           int      `db:"version"`
+	Status            string   `db:"status"`
+	Quality           string   `db:"quality"`
+	Completeness      string   `db:"completeness"`
+	TaxID             int      `db:"tax_id"`
+	OrganismName      string   `db:"organism_name"`
+	RetirementReasons []string `db:"retirement_reasons"`
+	SeeAlso           []string `db:"see_also"`
+	Data              JsonData `db:"data"`
 }
 
 type StatCluster struct {
@@ -23,13 +30,12 @@ type StatCluster struct {
 }
 
 type StatCounts struct {
-	Total      int `json:"total"`
-	Minimal    int `json:"minimal"`
-	Complete   int `json:"complete"`
-	Incomplete int `json:"incomplete"`
-	Pending    int `json:"pending"`
-	Active     int `json:"active"`
-	Retired    int `json:"retired"`
+	Total    int `json:"total"`
+	Complete int `json:"complete"`
+	Partial  int `json:"partial"`
+	Pending  int `json:"pending"`
+	Active   int `json:"active"`
+	Retired  int `json:"retired"`
 }
 
 type TaxonStats struct {
@@ -55,8 +61,8 @@ type Product struct {
 
 type RepositoryEntry struct {
 	Accession    string       `json:"accession"`
-	Minimal      bool         `json:"minimal"`
-	Complete     string       `json:"complete"`
+	Quality      string       `json:"quality"`
+	Completeness string       `json:"completeness"`
 	Status       string       `json:"status"`
 	Products     []Product    `json:"products"`
 	ProductTags  []ProductTag `json:"classes"`
@@ -124,8 +130,11 @@ type LecagyModel interface {
 }
 
 type Contributor struct {
-	Id           string `json:"id"`
-	Name         string `json:"name"`
-	Email        string `json:"email"`
-	Organisation string `json:"organisation"`
+	Id    string `json:"id"`
+	Name  string `json:"name"`
+	Email string `json:"email"`
+	Org1  string `json:"organisation_1"`
+	Org2  string `json:"organisation_2,omitempty"`
+	Org3  string `json:"organisation_3,omitempty"`
+	Orcid string `json:"orcid,omitempty"`
 }

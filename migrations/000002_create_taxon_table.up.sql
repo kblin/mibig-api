@@ -1,4 +1,4 @@
-CREATE TABLE mibig.taxa (
+CREATE TABLE data.taxa (
     tax_id	serial PRIMARY KEY,
     ncbi_taxid	bigint NOT NULL,
     superkingdom	text,

@@ -1,12 +1,13 @@
 package utils
 
 import (
-	"github.com/google/go-cmp/cmp"
 	"testing"
+
+	"github.com/google/go-cmp/cmp"
 )
 
-func TestIntersectInt(t *testing.T) {
-	var tests = []struct {
+func TestIntersect(t *testing.T) {
+	int_tests := []struct {
 		a        []int
 		b        []int
 		expected []int
@@ -14,50 +15,7 @@ func TestIntersectInt(t *testing.T) {
 		{[]int{1, 2, 3}, []int{2, 4, 6}, []int{2}},
 	}
 
-	for _, tt := range tests {
-		actual := IntersectInt(tt.a, tt.b)
-		if !cmp.Equal(actual, tt.expected) {
-			t.Errorf("IntersectInt(%v, %v): expected %v, got %v", tt.a, tt.b, tt.expected, actual)
-		}
-	}
-}
-
-func TestUnionInt(t *testing.T) {
-	var tests = []struct {
-		a        []int
-		b        []int
-		expected []int
-	}{
-		{[]int{1, 2, 3}, []int{2, 4, 6}, []int{1, 2, 3, 4, 6}},
-	}
-
-	for _, tt := range tests {
-		actual := UnionInt(tt.a, tt.b)
-		if !cmp.Equal(actual, tt.expected) {
-			t.Errorf("UnionInt(%v, %v): expected %v, got %v", tt.a, tt.b, tt.expected, actual)
-		}
-	}
-}
-
-func TestDifferenceInt(t *testing.T) {
-	var tests = []struct {
-		a        []int
-		b        []int
-		expected []int
-	}{
-		{[]int{1, 2, 3}, []int{2, 4, 6}, []int{1, 3}},
-	}
-
-	for _, tt := range tests {
-		actual := DifferenceInt(tt.a, tt.b)
-		if !cmp.Equal(actual, tt.expected) {
-			t.Errorf("DifferenceInt(%v, %v): expected %v, got %v", tt.a, tt.b, tt.expected, actual)
-		}
-	}
-}
-
-func TestIntersectString(t *testing.T) {
-	var tests = []struct {
+	string_tests := []struct {
 		a        []string
 		b        []string
 		expected []string
@@ -65,16 +23,30 @@ func TestIntersectString(t *testing.T) {
 		{[]string{"a", "b", "c"}, []string{"b", "i", "n"}, []string{"b"}},
 	}
 
-	for _, tt := range tests {
-		actual := IntersectString(tt.a, tt.b)
-		if !cmp.Equal(actual, tt.expected) {
-			t.Errorf("IntersectString(%v, %v): expected %v, got %v", tt.a, tt.b, tt.expected, actual)
+	for _, tt := range int_tests {
+		res := Intersect(tt.a, tt.b)
+		if !cmp.Equal(res, tt.expected) {
+			t.Errorf("Intersect(%v, %v): expected %v, got %v", tt.a, tt.b, tt.expected, res)
+		}
+	}
+	for _, tt := range string_tests {
+		res := Intersect(tt.a, tt.b)
+		if !cmp.Equal(res, tt.expected) {
+			t.Errorf("Intersect(%v, %v): expected %v, got %v", tt.a, tt.b, tt.expected, res)
 		}
 	}
 }
 
-func TestUnionString(t *testing.T) {
-	var tests = []struct {
+func TestUnion(t *testing.T) {
+	int_tests := []struct {
+		a        []int
+		b        []int
+		expected []int
+	}{
+		{[]int{1, 2, 3}, []int{2, 4, 6}, []int{1, 2, 3, 4, 6}},
+	}
+
+	string_tests := []struct {
 		a        []string
 		b        []string
 		expected []string
@@ -82,16 +54,30 @@ func TestUnionString(t *testing.T) {
 		{[]string{"a", "b", "c"}, []string{"b", "i", "n"}, []string{"a", "b", "c", "i", "n"}},
 	}
 
-	for _, tt := range tests {
-		actual := UnionString(tt.a, tt.b)
-		if !cmp.Equal(actual, tt.expected) {
-			t.Errorf("UnionString(%v, %v): expected %v, got %v", tt.a, tt.b, tt.expected, actual)
+	for _, tt := range int_tests {
+		res := Union(tt.a, tt.b)
+		if !cmp.Equal(res, tt.expected) {
+			t.Errorf("Union(%v, %v): expected %v, got %v", tt.a, tt.b, tt.expected, res)
+		}
+	}
+	for _, tt := range string_tests {
+		res := Union(tt.a, tt.b)
+		if !cmp.Equal(res, tt.expected) {
+			t.Errorf("Union(%v, %v): expected %v, got %v", tt.a, tt.b, tt.expected, res)
 		}
 	}
 }
 
-func TestDifferenceString(t *testing.T) {
-	var tests = []struct {
+func TestDifference(t *testing.T) {
+	int_tests := []struct {
+		a        []int
+		b        []int
+		expected []int
+	}{
+		{[]int{1, 2, 3}, []int{2, 4, 6}, []int{1, 3}},
+	}
+
+	string_tests := []struct {
 		a        []string
 		b        []string
 		expected []string
@@ -99,10 +85,16 @@ func TestDifferenceString(t *testing.T) {
 		{[]string{"a", "b", "c"}, []string{"b", "i", "n"}, []string{"a", "c"}},
 	}
 
-	for _, tt := range tests {
-		actual := DifferenceString(tt.a, tt.b)
-		if !cmp.Equal(actual, tt.expected) {
-			t.Errorf("DifferenceString(%v, %v): expected %v, got %v", tt.a, tt.b, tt.expected, actual)
+	for _, tt := range int_tests {
+		res := Difference(tt.a, tt.b)
+		if !cmp.Equal(res, tt.expected) {
+			t.Errorf("Difference(%v, %v): expected %v, got %v", tt.a, tt.b, tt.expected, res)
+		}
+	}
+	for _, tt := range string_tests {
+		res := Difference(tt.a, tt.b)
+		if !cmp.Equal(res, tt.expected) {
+			t.Errorf("Difference(%v, %v): expected %v, got %v", tt.a, tt.b, tt.expected, res)
 		}
 	}
 }

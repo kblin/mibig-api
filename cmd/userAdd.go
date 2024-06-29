@@ -30,15 +30,17 @@ import (
 )
 
 var (
-	active       bool
-	call_name    string
-	email        string
-	gdpr_consent bool
-	institution  string
-	name         string
-	password     string
-	public       bool
-	role_list    []string
+	active         bool
+	call_name      string
+	email          string
+	organisation_1 string
+	organisation_2 string
+	organisation_3 string
+	orcid          string
+	name           string
+	password       string
+	public         bool
+	role_list      []string
 )
 
 // userAddCmd represents the add command
@@ -50,13 +52,17 @@ var userAddCmd = &cobra.Command{
 Required parameters can be passed on the command line, or added in the interactive prompt.`,
 	Run: func(cmd *cobra.Command, args []string) {
 		user := data.User{
-			Email:       email,
-			Name:        name,
-			CallName:    call_name,
-			Institution: institution,
-			Public:      public,
-			GDPRConsent: gdpr_consent,
-			Active:      active,
+			Email: email,
+			Info: data.UserInfo{
+				Name:     name,
+				CallName: call_name,
+				Org1:     organisation_1,
+				Org2:     organisation_2,
+				Org3:     organisation_3,
+				Orcid:    orcid,
+				Public:   public,
+			},
+			Active: active,
 		}
 
 		db, err := InitDb()
@@ -66,22 +72,22 @@ Required parameters can be passed on the command line, or added in the interacti
 
 		m := models.NewModels(db)
 
-		user.Roles, err = m.Submitters.GetRolesByName(role_list)
+		user.Roles, err = m.Users.GetRolesByName(role_list)
 		if err != nil {
 			panic(fmt.Errorf("error getting roles: %s", err))
 		}
 
-		if user.Email == "" || user.Name == "" || password == "" {
+		if user.Email == "" || user.Info.Name == "" || password == "" {
 			for {
 				password = InteractiveUserEdit(&user, m)
-				if user.Email != "" && user.Name != "" && password != "" {
+				if user.Email != "" && user.Info.Name != "" && password != "" {
 					break
 				}
 				fmt.Println("*** Invalid user data, please try again ***")
 			}
 		}
 
-		err = m.Submitters.Insert(&user, password)
+		err = m.Users.Insert(&user, password)
 		if err != nil {
 			panic(fmt.Errorf("error adding user: %s", err))
 		}
@@ -94,8 +100,10 @@ func init() {
 	userAddCmd.Flags().BoolVarP(&active, "active", "a", true, "Added account is active")
 	userAddCmd.Flags().StringVarP(&call_name, "call-name", "C", "", "How to address the user")
 	userAddCmd.Flags().StringVarP(&email, "email", "e", "", "Email address of user")
-	userAddCmd.Flags().BoolVarP(&gdpr_consent, "gdpr-consent", "g", false, "Added account is consentet to us using the data")
-	userAddCmd.Flags().StringVarP(&institution, "institution", "i", "", "Name of user's institute/company")
+	userAddCmd.Flags().StringVarP(&organisation_1, "organisation-1", "o", "", "Name of user's first affiliation")
+	userAddCmd.Flags().StringVarP(&organisation_2, "organisation-2", "", "", "Name of user's second affiliation")
+	userAddCmd.Flags().StringVarP(&organisation_3, "organisation-3", "", "", "Name of user's third affiliation")
+	userAddCmd.Flags().StringVarP(&orcid, "orcid", "O", "", "Name of user's institute/company")
 	userAddCmd.Flags().StringVarP(&name, "name", "n", "", "Name of user")
 	userAddCmd.Flags().StringVarP(&password, "password", "p", "", "Password of user")
 	userAddCmd.Flags().BoolVarP(&public, "public", "P", false, "Added account is public")
@@ -106,15 +114,16 @@ func InteractiveUserEdit(user *data.User, m models.Models) string {
 	reader := bufio.NewReader(os.Stdin)
 
 	user.Email = readStringValue(reader, user.Email, "Email [%s]: ")
-	user.Name = readStringValue(reader, user.Name, "Name [%s]: ")
-	user.CallName = readStringValue(reader, user.CallName, "Call name [%s]: ")
-	if user.CallName == "" {
-		user.CallName = strings.Split(user.Name, " ")[0]
+	user.Info.Name = readStringValue(reader, user.Info.Name, "Name [%s]: ")
+	user.Info.CallName = readStringValue(reader, user.Info.CallName, "Call name [%s]: ")
+	if user.Info.CallName == "" {
+		user.Info.CallName = strings.Split(user.Info.Name, " ")[0]
 	}
-	user.Institution = readStringValue(reader, user.Institution, "Organisation [%s]: ")
+	user.Info.Org1 = readStringValue(reader, user.Info.Org1, "Organisation 1 [%s]: ")
+	user.Info.Org2 = readStringValue(reader, user.Info.Org2, "Organisation 2 [%s]: ")
+	user.Info.Org3 = readStringValue(reader, user.Info.Org3, "Organisation 3 [%s]: ")
 	new_password := readPassword()
-	user.Public = readBool(reader, user.Public, "Public profile (true/false) [%s]: ")
-	user.GDPRConsent = readBool(reader, user.GDPRConsent, "GDPR consent given (true/false) [%s]: ")
+	user.Info.Public = readBool(reader, user.Info.Public, "Public profile (true/false) [%s]: ")
 	user.Active = readBool(reader, user.Active, "Active (true/false) [%s]: ")
 	user.Roles = readRoles(reader, m, user.Roles)
 
@@ -205,7 +214,7 @@ func readRoles(reader *bufio.Reader, m models.Models, old_roles []data.Role) []d
 			return old_roles
 		}
 		parts := strings.Split(strings.Replace(tmp_string, " ", "", -1), ",")
-		new_roles, err = m.Submitters.GetRolesByName(parts)
+		new_roles, err = m.Users.GetRolesByName(parts)
 		if err != nil {
 			fmt.Fprintf(os.Stderr, "Error getting roles: %s", err.Error())
 			continue

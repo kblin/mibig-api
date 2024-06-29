@@ -18,7 +18,7 @@ type VersionInfo struct {
 
 func (app *application) version(c *gin.Context) {
 	version_info := VersionInfo{
-		Api:        "3.0",
+		Api:        "4.0alpha1",
 		BuildTime:  viper.GetString("buildTime"),
 		GitVersion: viper.GetString("gitVer"),
 	}
@@ -26,9 +26,8 @@ func (app *application) version(c *gin.Context) {
 }
 
 type Stats struct {
-	Counts     *data.StatCounts   `json:"counts"`
-	Clusters   []data.StatCluster `json:"clusters"`
-	TaxonStats []data.TaxonStats  `json:"taxon_stats"`
+	Counts   *data.StatCounts   `json:"counts"`
+	Clusters []data.StatCluster `json:"clusters"`
 }
 
 func (app *application) stats(c *gin.Context) {
@@ -44,16 +43,9 @@ func (app *application) stats(c *gin.Context) {
 		return
 	}
 
-	taxon_stats, err := app.Models.Entries.GenusStats()
-	if err != nil {
-		app.serverError(c, err)
-		return
-	}
-
 	stat_info := Stats{
-		Counts:     counts,
-		Clusters:   clusters,
-		TaxonStats: taxon_stats,
+		Counts:   counts,
+		Clusters: clusters,
 	}
 
 	c.JSON(http.StatusOK, &stat_info)

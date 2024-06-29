@@ -33,7 +33,7 @@ func (app *application) Authenticate() gin.HandlerFunc {
 			return
 		}
 
-		user, err = app.Models.Submitters.GetForToken(data.ScopeAuthentication, token)
+		user, err = app.Models.Users.GetForToken(data.ScopeAuthentication, token)
 		if err != nil {
 			switch {
 			case errors.Is(err, data.ErrRecordNotFound):
@@ -117,10 +117,12 @@ func (app *application) RequireRoles(requiredRoles []string) gin.HandlerFunc {
 			return
 		}
 
-		validRoles := utils.IntersectString(requiredRoles, data.RolesToStrings(user.Roles))
+		validRoles := utils.Intersect(requiredRoles, data.RolesToStrings(user.Roles))
 		if len(validRoles) == 0 {
 			app.notPermitted(c)
 			return
 		}
+
+		c.Next()
 	}
 }

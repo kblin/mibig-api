@@ -1,1 +1,1 @@
-DROP TABLE IF EXISTS mibig.taxa;
+DROP TABLE IF EXISTS data.taxa;

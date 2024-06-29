@@ -26,7 +26,7 @@ func (app *application) Login(c *gin.Context) {
 		return
 	}
 
-	user, err := app.Models.Submitters.Authenticate(login.Email, login.Password)
+	user, err := app.Models.Users.Authenticate(login.Email, login.Password)
 	if err != nil {
 		if errors.Is(err, data.ErrInvalidCredentials) {
 			c.AbortWithStatus(http.StatusUnauthorized)
@@ -54,18 +54,21 @@ func (app *application) Logout(c *gin.Context) {
 
 func (app *application) AuthTest(c *gin.Context) {
 	user := app.GetCurrentUser(c)
-	c.String(http.StatusOK, "Hello %s!", user.CallName)
+	c.String(http.StatusOK, "Hello %s!", user.Info.CallName)
 }
 
+// TODO: Do we even want people to register themselves?
 func (app *application) Register(c *gin.Context) {
 	var input struct {
-		Name        string `json:"name"`
-		Email       string `json:"email"`
-		Password    string `json:"password"`
-		CallName    string `json:"call_name"`
-		Institution string `json:"institution"`
-		Public      bool   `json:"public"`
-		GdprConsent bool   `json:"gdpr_consent"`
+		Name     string `json:"name"`
+		Email    string `json:"email"`
+		Password string `json:"password"`
+		CallName string `json:"call_name"`
+		Org1     string `json:"organisation_1"`
+		Org2     string `json:"organisation_2"`
+		Org3     string `json:"organisation_3"`
+		Orcid    string `json:"orcid"`
+		Public   bool   `json:"public"`
 	}
 	err := c.BindJSON(&input)
 	if err != nil {
@@ -74,16 +77,20 @@ func (app *application) Register(c *gin.Context) {
 	}
 
 	user := &data.User{
-		Email:       input.Email,
-		Name:        input.Name,
-		CallName:    input.CallName,
-		Institution: input.Institution,
-		Public:      input.Public,
-		GDPRConsent: input.GdprConsent,
-		Active:      false,
+		Email:  input.Email,
+		Active: false,
+		Info: data.UserInfo{
+			Name:     input.Name,
+			CallName: input.CallName,
+			Org1:     input.Org1,
+			Org2:     input.Org2,
+			Org3:     input.Org3,
+			Orcid:    input.Orcid,
+			Public:   input.Public,
+		},
 	}
 
-	err = app.Models.Submitters.Insert(user, input.Password)
+	err = app.Models.Users.Insert(user, input.Password)
 	if err != nil {
 		switch {
 		case errors.Is(err, data.ErrDuplicateEmail):
@@ -94,7 +101,7 @@ func (app *application) Register(c *gin.Context) {
 		return
 	}
 
-	user, err = app.Models.Submitters.Get(input.Email, false)
+	user, err = app.Models.Users.Get(input.Email, false)
 	if err != nil {
 		app.serverError(c, err)
 		return
@@ -134,7 +141,7 @@ func (app *application) Activate(c *gin.Context) {
 
 	// TODO: Add a validation check here
 
-	user, err := app.Models.Submitters.GetForToken(data.ScopeActivation, input.TokenPlaintext)
+	user, err := app.Models.Users.GetForToken(data.ScopeActivation, input.TokenPlaintext)
 	if err != nil {
 		switch {
 		case errors.Is(err, data.ErrRecordNotFound):
@@ -147,7 +154,7 @@ func (app *application) Activate(c *gin.Context) {
 
 	user.Active = true
 
-	err = app.Models.Submitters.Update(user, "")
+	err = app.Models.Users.Update(user, "")
 	if err != nil {
 		switch {
 		case errors.Is(err, data.ErrEditConflict):

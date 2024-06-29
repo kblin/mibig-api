@@ -5,7 +5,7 @@ Licensed under the Apache License, Version 2.0 (the "License");
 you may not use this file except in compliance with the License.
 You may obtain a copy of the License at
 
-    http://www.apache.org/licenses/LICENSE-2.0
+	http://www.apache.org/licenses/LICENSE-2.0
 
 Unless required by applicable law or agreed to in writing, software
 distributed under the License is distributed on an "AS IS" BASIS,
@@ -43,21 +43,21 @@ Only roles the user possesses will be removed.`,
 
 		m := models.NewModels(db)
 
-		user, err := m.Submitters.Get(email, false)
+		user, err := m.Users.Get(email, false)
 		if err != nil {
 			panic(fmt.Errorf("error reading user for %s: %s", email, err))
 		}
 
 		oldRoleNames := data.RolesToStrings(user.Roles)
 
-		roleNames := utils.DifferenceString(oldRoleNames, deleteRoleNames)
+		roleNames := utils.Difference(oldRoleNames, deleteRoleNames)
 
-		user.Roles, err = m.Submitters.GetRolesByName(roleNames)
+		user.Roles, err = m.Users.GetRolesByName(roleNames)
 		if err != nil {
 			panic(fmt.Errorf("error getting roles for %v: %s", roleNames, err))
 		}
 
-		err = m.Submitters.Update(user, "")
+		err = m.Users.Update(user, "")
 		if err != nil {
 			panic(fmt.Errorf("error updating user: %s", err))
 		}

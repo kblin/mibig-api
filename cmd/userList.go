@@ -5,7 +5,7 @@ Licensed under the Apache License, Version 2.0 (the "License");
 you may not use this file except in compliance with the License.
 You may obtain a copy of the License at
 
-    http://www.apache.org/licenses/LICENSE-2.0
+	http://www.apache.org/licenses/LICENSE-2.0
 
 Unless required by applicable law or agreed to in writing, software
 distributed under the License is distributed on an "AS IS" BASIS,
@@ -49,14 +49,14 @@ func listUsers() {
 
 	m := models.NewModels(db)
 
-	users, err := m.Submitters.List()
+	users, err := m.Users.List()
 	if err != nil {
 		panic(fmt.Errorf("error listing users: %s", err))
 	}
 
-	fmt.Printf("ID\tEmail\tName\tPublic\tGDPR\tActive\tRoles\n")
+	fmt.Printf("ID\tEmail\tName\tPublic\tActive\tRoles\n")
 	for _, user := range users {
 		role_string := strings.Join(data.RolesToStrings(user.Roles), ", ")
-		fmt.Printf("%s\t%s\t%s\t%t\t%t\t%t\t%s\n", user.Id, user.Email, user.Name, user.Public, user.GDPRConsent, user.Active, role_string)
+		fmt.Printf("%s\t%s\t%s\t%t\t%t\t%s\n", user.Info.Alias, user.Email, user.Info.Name, user.Info.Public, user.Active, role_string)
 	}
 }

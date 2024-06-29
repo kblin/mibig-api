@@ -9,8 +9,8 @@ import (
 )
 
 type TokenModel interface {
-	New(userId string, ttl time.Duration, scope string) (*data.Token, error)
-	DeleteAllForUser(userId, scope string) error
+	New(userId int64, ttl time.Duration, scope string) (*data.Token, error)
+	DeleteAllForUser(userId int64, scope string) error
 }
 
 type LiveTokenModel struct {
@@ -21,7 +21,7 @@ func NewTokenModel(db *sql.DB) *LiveTokenModel {
 	return &LiveTokenModel{DB: db}
 }
 
-func (t *LiveTokenModel) New(userId string, ttl time.Duration, scope string) (*data.Token, error) {
+func (t *LiveTokenModel) New(userId int64, ttl time.Duration, scope string) (*data.Token, error) {
 	token, err := data.GenerateToken(userId, ttl, scope)
 	if err != nil {
 		return nil, err
@@ -36,7 +36,7 @@ func (t *LiveTokenModel) New(userId string, ttl time.Duration, scope string) (*d
 
 func (t *LiveTokenModel) insert(token *data.Token) error {
 	query := `
-		INSERT INTO mibig_submitters.tokens (hash, user_id, expiry, scope)
+		INSERT INTO auth.tokens (hash, user_id, expiry, scope)
 		VALUES ($1, $2, $3, $4)`
 
 	args := []interface{}{token.Hash, token.UserID, token.Expiry, token.Scope}
@@ -48,9 +48,9 @@ func (t *LiveTokenModel) insert(token *data.Token) error {
 	return err
 }
 
-func (t *LiveTokenModel) DeleteAllForUser(userId, scope string) error {
+func (t *LiveTokenModel) DeleteAllForUser(userId int64, scope string) error {
 	query := `
-		DELETE FROM mibig_submitters.tokens
+		DELETE FROM auth.tokens
 		WHERE user_id = $1 and scope = $2`
 
 	ctx, cancel := context.WithTimeout(context.Background(), 3*time.Second)
@@ -76,7 +76,7 @@ func NewMockTokenModel(scopes []string) *MockTokenModel {
 	}
 }
 
-func (t *MockTokenModel) New(userId string, ttl time.Duration, scope string) (*data.Token, error) {
+func (t *MockTokenModel) New(userId int64, ttl time.Duration, scope string) (*data.Token, error) {
 	token, err := data.GenerateToken(userId, ttl, scope)
 	if err != nil {
 		return nil, err
@@ -87,7 +87,7 @@ func (t *MockTokenModel) New(userId string, ttl time.Duration, scope string) (*d
 	return token, nil
 }
 
-func (t *MockTokenModel) DeleteAllForUser(userId, scope string) error {
+func (t *MockTokenModel) DeleteAllForUser(userId int64, scope string) error {
 	var remaining []*data.Token
 	for _, token := range t.Tokens[scope] {
 		if token.UserID != userId {

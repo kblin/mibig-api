@@ -2,7 +2,6 @@ package models
 
 import (
 	"database/sql"
-	"encoding/json"
 	"fmt"
 	"strings"
 
@@ -24,7 +23,7 @@ type EntryModel interface {
 	GuessCategories(query *queries.Query) error
 	LookupContributors(ids []string) ([]data.Contributor, error)
 
-	Add(entry data.MibigEntry, taxCache *data.TaxonCache) error
+	Add(entry data.MibigEntry, raw []byte, taxCache *data.TaxonCache) error
 	LoadTaxonEntry(name string, ncbi_taxid int64, taxCache *data.TaxonCache) error
 }
 
@@ -37,21 +36,15 @@ func NewEntryModel(db *sql.DB) *LiveEntryModel {
 }
 
 func (m *LiveEntryModel) Counts() (*data.StatCounts, error) {
-	stmt_total := `SELECT COUNT(entry_id) FROM mibig.entries`
-	stmt_minimal := `SELECT COUNT(entry_id) FROM mibig.entries WHERE minimal = TRUE`
-	stmt_complete := `SELECT COUNT(entry_id) FROM mibig.entries LEFT JOIN mibig.loci USING (entry_id) WHERE completeness = 'complete'`
-	stmt_incomplete := `SELECT COUNT(entry_id) FROM mibig.entries LEFT JOIN mibig.loci USING (entry_id) WHERE completeness = 'incomplete'`
-	stmt_pending := `SELECT COUNT(entry_id) FROM mibig.entries WHERE status = 'pending'`
-	stmt_active := `SELECT COUNT(entry_id) FROM mibig.entries WHERE status = 'active'`
-	stmt_retired := `SELECT COUNT(entry_id) FROM mibig.entries WHERE status = 'retired'`
+	stmt_total := `SELECT COUNT(entry_id) FROM live.entries`
+	stmt_complete := `SELECT COUNT(entry_id) FROM live.entries WHERE completeness = 'complete'`
+	stmt_partial := `SELECT COUNT(entry_id) FROM live.entries WHERE completeness = 'partial'`
+	stmt_pending := `SELECT COUNT(entry_id) FROM live.entries WHERE status = 'pending'`
+	stmt_active := `SELECT COUNT(entry_id) FROM live.entries WHERE status = 'active'`
+	stmt_retired := `SELECT COUNT(entry_id) FROM live.entries WHERE status = 'retired'`
 	var counts data.StatCounts
 
 	err := m.DB.QueryRow(stmt_total).Scan(&counts.Total)
-	if err != nil {
-		return nil, err
-	}
-
-	err = m.DB.QueryRow(stmt_minimal).Scan(&counts.Minimal)
 	if err != nil {
 		return nil, err
 	}
@@ -61,7 +54,7 @@ func (m *LiveEntryModel) Counts() (*data.StatCounts, error) {
 		return nil, err
 	}
 
-	err = m.DB.QueryRow(stmt_incomplete).Scan(&counts.Incomplete)
+	err = m.DB.QueryRow(stmt_partial).Scan(&counts.Partial)
 	if err != nil {
 		return nil, err
 	}
@@ -84,12 +77,9 @@ func (m *LiveEntryModel) Counts() (*data.StatCounts, error) {
 }
 
 func (m *LiveEntryModel) ClusterStats() ([]data.StatCluster, error) {
-	statement := `SELECT term, description, entry_count, safe_class FROM
-	(
-		SELECT unnest(biosyn_class) AS name, COUNT(1) AS entry_count FROM mibig.entries GROUP BY name
-	) counter
-	LEFT JOIN mibig.bgc_types t USING (name)
-	ORDER BY entry_count DESC`
+	statement := `SELECT
+	unnest(names) AS name, unnest(descriptions) AS description, unnest(css_classes) AS css_class, COUNT(1) AS entry_count
+FROM live.entry_bgc_info GROUP BY name, description, css_class ORDER BY entry_count DESC, name`
 
 	var clusters []data.StatCluster
 
@@ -101,7 +91,7 @@ func (m *LiveEntryModel) ClusterStats() ([]data.StatCluster, error) {
 
 	for rows.Next() {
 		cluster := data.StatCluster{}
-		if err = rows.Scan(&cluster.Type, &cluster.Description, &cluster.Count, &cluster.Class); err != nil {
+		if err = rows.Scan(&cluster.Type, &cluster.Description, &cluster.Class, &cluster.Count); err != nil {
 			return nil, err
 		}
 		clusters = append(clusters, cluster)
@@ -111,7 +101,7 @@ func (m *LiveEntryModel) ClusterStats() ([]data.StatCluster, error) {
 }
 
 func (m *LiveEntryModel) GenusStats() ([]data.TaxonStats, error) {
-	statement := `SELECT genus, COUNT(genus) AS ct FROM mibig.entries LEFT JOIN mibig.taxa USING (tax_id) GROUP BY genus ORDER BY ct DESC, genus`
+	statement := `SELECT genus, COUNT(genus) AS ct FROM live.entries LEFT JOIN mibig.taxa USING (tax_id) GROUP BY genus ORDER BY ct DESC, genus`
 	var stats []data.TaxonStats
 
 	rows, err := m.DB.Query(statement)
@@ -133,21 +123,10 @@ func (m *LiveEntryModel) GenusStats() ([]data.TaxonStats, error) {
 
 func (m *LiveEntryModel) Repository() ([]data.RepositoryEntry, error) {
 	statement := `SELECT
-		a.entry_id,
-		a.minimal,
-		l.completeness AS complete,
-		a.status,
-		array_agg(DISTINCT c.name) AS compounds,
-		array_agg(array_to_json(synonyms)) AS synonyms,
-		array_agg(DISTINCT safe_class || ':' || b.name ORDER BY safe_class || ':' || b.name) AS biosyn_class,
-		t.name
-	FROM mibig.entries a
-	JOIN mibig.rel_entries_types USING (entry_id)
-	JOIN mibig.bgc_types b USING (bgc_type_id)
-	JOIN mibig.taxa t USING (tax_id)
-	JOIN mibig.loci l USING (entry_id)
-	JOIN mibig.chem_compounds c USING (entry_id)
-	GROUP BY entry_id, minimal, complete, t.name
+	entry_id, quality, completeness, status, compounds, synonyms, descriptions, css_classes, organism_name
+	FROM live.entries
+	LEFT JOIN live.entry_compounds USING (entry_id)
+	LEFT JOIN live.entry_bgc_info USING (entry_id)
 	ORDER BY entry_id`
 
 	rows, err := m.DB.Query(statement)
@@ -163,37 +142,30 @@ func parseRepositoryEntriesFromDB(rows *sql.Rows) ([]data.RepositoryEntry, error
 
 	for rows.Next() {
 		var (
-			class_and_css    []string
+			descriptions     []string
+			css_classes      []string
 			product_names    []string
 			product_synonyms []sql.NullString
 			products         []data.Product
 		)
 
 		entry := data.RepositoryEntry{}
-		if err := rows.Scan(&entry.Accession, &entry.Minimal, &entry.Complete, &entry.Status,
-			pq.Array(&product_names),
-			pq.Array(&product_synonyms), pq.Array(&class_and_css), &entry.OrganismName); err != nil {
+		if err := rows.Scan(&entry.Accession, &entry.Quality, &entry.Completeness, &entry.Status,
+			pq.Array(&product_names), pq.Array(&product_synonyms),
+			pq.Array(&descriptions), pq.Array(&css_classes),
+			&entry.OrganismName); err != nil {
 			return nil, err
 		}
 
 		products = make([]data.Product, len(product_names))
 		for i := range product_names {
 			products[i] = data.Product{Name: product_names[i]}
-			if !product_synonyms[i].Valid {
-				continue
-			}
-			var parsed_synonyms []string
-			err := json.Unmarshal([]byte(product_synonyms[i].String), &parsed_synonyms)
-			if err != nil {
-				return nil, err
-			}
-			products[i].Synonyms = parsed_synonyms
+			products[i].Synonyms = nil
 		}
 		entry.Products = products
 
-		for _, combined := range class_and_css {
-			parts := strings.SplitN(combined, ":", 2)
-			tag := data.ProductTag{Name: parts[1], Class: parts[0]}
+		for i, description := range descriptions {
+			tag := data.ProductTag{Name: description, Class: css_classes[i]}
 			entry.ProductTags = append(entry.ProductTags, tag)
 		}
 		entries = append(entries, entry)
@@ -212,7 +184,7 @@ func (m *LiveEntryModel) Get(ids []string) ([]data.RepositoryEntry, error) {
 		array_agg(DISTINCT safe_class || ':' || b.name ORDER BY safe_class || ':' || b.name) AS biosyn_class,
 		t.name
 	FROM ( SELECT * FROM unnest($1::text[]) AS entry_id) vals
-	JOIN mibig.entries a USING (entry_id)
+	JOIN live.entries a USING (entry_id)
 	JOIN mibig.rel_entries_types USING (entry_id)
 	JOIN mibig.bgc_types b USING (bgc_type_id)
 	JOIN mibig.chem_compounds c USING (entry_id)
@@ -231,7 +203,7 @@ func (m *LiveEntryModel) Get(ids []string) ([]data.RepositoryEntry, error) {
 
 var categoryDetector = map[string]string{
 	"type":     `SELECT COUNT(bgc_type_id) FROM mibig.bgc_types WHERE term ILIKE $1`,
-	"acc":      `SELECT COUNT(entry_id) FROM mibig.entries WHERE entry_id ILIKE $1`,
+	"acc":      `SELECT COUNT(entry_id) FROM live.entries WHERE entry_id ILIKE $1`,
 	"compound": `SELECT COUNT(entry_id) FROM mibig.chem_compounds WHERE name ILIKE $1`,
 	"genus":    `SELECT COUNT(tax_id) FROM mibig.taxa WHERE genus ILIKE $1`,
 	"species":  `SELECT COUNT(tax_id) FROM mibig.taxa WHERE species ILIKE $1`,
@@ -253,25 +225,25 @@ func (m *LiveEntryModel) guessCategory(term string) (string, error) {
 }
 
 var statementByCategory = map[string]string{
-	"type": `SELECT entry_id FROM mibig.entries e LEFT JOIN mibig.rel_entries_types ret USING (entry_id) WHERE bgc_type_id IN (
+	"type": `SELECT entry_id FROM live.entries e LEFT JOIN mibig.rel_entries_types ret USING (entry_id) WHERE bgc_type_id IN (
 	WITH RECURSIVE all_subtypes AS (
 		SELECT bgc_type_id, parent_id FROM mibig.bgc_types WHERE term = $1
 	UNION
 		SELECT r.bgc_type_id, r.parent_id FROM mibig.bgc_types r INNER JOIN all_subtypes s ON s.bgc_type_id = r.parent_id)
 	SELECT bgc_type_id FROM all_subtypes)`,
 	"compound":     `SELECT entry_id FROM mibig.chem_compounds WHERE name ILIKE $1`,
-	"acc":          `SELECT entry_id FROM mibig.entries WHERE entry_id ILIKE $1`,
-	"superkingdom": `SELECT entry_id FROM mibig.entries LEFT JOIN mibig.taxa USING (tax_id) WHERE superkingdom ILIKE $1`,
-	"kingdom":      `SELECT entry_id FROM mibig.entries LEFT JOIN mibig.taxa USING (tax_id) WHERE kingdom ILIKE $1`,
-	"phylum":       `SELECT entry_id FROM mibig.entries LEFT JOIN mibig.taxa USING (tax_id) WHERE phylum ILIKE $1`,
-	"class":        `SELECT entry_id FROM mibig.entries LEFT JOIN mibig.taxa USING (tax_id) WHERE class ILIKE $1`,
-	"order":        `SELECT entry_id FROM mibig.entries LEFT JOIN mibig.taxa USING (tax_id) WHERE taxonomic_order ILIKE $1`,
-	"family":       `SELECT entry_id FROM mibig.entries LEFT JOIN mibig.taxa USING (tax_id) WHERE family ILIKE $1`,
-	"genus":        `SELECT entry_id FROM mibig.entries LEFT JOIN mibig.taxa USING (tax_id) WHERE genus ILIKE $1`,
-	"species":      `SELECT entry_id FROM mibig.entries LEFT JOIN mibig.taxa USING (tax_id) WHERE species ILIKE $1`,
-	"minimal":      `SELECT entry_id FROM mibig.entries WHERE minimal = $1`,
-	"completeness": `SELECT entry_id FROM mibig.entries LEFT JOIN mibig.loci USING (entry_id) WHERE completeness = $1`,
-	"ncbi":         `SELECT entry_id FROM mibig.entries LEFT JOIN mibig.loci USING (entry_id) WHERE accession ILIKE $1`,
+	"acc":          `SELECT entry_id FROM live.entries WHERE entry_id ILIKE $1`,
+	"superkingdom": `SELECT entry_id FROM live.entries LEFT JOIN mibig.taxa USING (tax_id) WHERE superkingdom ILIKE $1`,
+	"kingdom":      `SELECT entry_id FROM live.entries LEFT JOIN mibig.taxa USING (tax_id) WHERE kingdom ILIKE $1`,
+	"phylum":       `SELECT entry_id FROM live.entries LEFT JOIN mibig.taxa USING (tax_id) WHERE phylum ILIKE $1`,
+	"class":        `SELECT entry_id FROM live.entries LEFT JOIN mibig.taxa USING (tax_id) WHERE class ILIKE $1`,
+	"order":        `SELECT entry_id FROM live.entries LEFT JOIN mibig.taxa USING (tax_id) WHERE taxonomic_order ILIKE $1`,
+	"family":       `SELECT entry_id FROM live.entries LEFT JOIN mibig.taxa USING (tax_id) WHERE family ILIKE $1`,
+	"genus":        `SELECT entry_id FROM live.entries LEFT JOIN mibig.taxa USING (tax_id) WHERE genus ILIKE $1`,
+	"species":      `SELECT entry_id FROM live.entries LEFT JOIN mibig.taxa USING (tax_id) WHERE species ILIKE $1`,
+	"minimal":      `SELECT entry_id FROM live.entries WHERE minimal = $1`,
+	"completeness": `SELECT entry_id FROM live.entries LEFT JOIN mibig.loci USING (entry_id) WHERE completeness = $1`,
+	"ncbi":         `SELECT entry_id FROM live.entries LEFT JOIN mibig.loci USING (entry_id) WHERE accession ILIKE $1`,
 }
 
 func (m *LiveEntryModel) Search(t queries.QueryTerm) ([]string, error) {
@@ -320,11 +292,11 @@ func (m *LiveEntryModel) Search(t queries.QueryTerm) ([]string, error) {
 		}
 		switch v.Operation {
 		case queries.AND:
-			return utils.IntersectString(left, right), nil
+			return utils.Intersect(left, right), nil
 		case queries.OR:
-			return utils.UnionString(left, right), nil
+			return utils.Union(left, right), nil
 		case queries.EXCEPT:
-			return utils.DifferenceString(left, right), nil
+			return utils.Difference(left, right), nil
 		default:
 			return nil, fmt.Errorf("invalid operation: %s", v.Op())
 		}
@@ -336,7 +308,7 @@ func (m *LiveEntryModel) Search(t queries.QueryTerm) ([]string, error) {
 var availableByCategory = map[string]string{
 	"type":         `SELECT DISTINCT(term), description FROM mibig.bgc_types WHERE term ILIKE concat($1::text, '%') OR description ILIKE concat($1::text, '%') ORDER BY term`,
 	"compound":     `SELECT DISTINCT(name), name FROM mibig.chem_compounds WHERE name ILIKE concat($1::text, '%')`,
-	"acc":          `SELECT DISTINCT(entry_id), entry_id FROM mibig.entries WHERE entry_id ILIKE concat('%', $1::text, '%')`,
+	"acc":          `SELECT DISTINCT(entry_id), entry_id FROM live.entries WHERE entry_id ILIKE concat('%', $1::text, '%')`,
 	"superkingdom": `SELECT DISTINCT(superkingdom), superkingdom FROM mibig.taxa WHERE superkingdom ILIKE concat('%', $1::text, '%')`,
 	"kingdom":      `SELECT DISTINCT(kingdom), kingdom FROM mibig.taxa WHERE kingdom ILIKE concat('%', $1::text, '%')`,
 	"phylum":       `SELECT DISTINCT(phylum), phylum FROM mibig.taxa WHERE phylum ILIKE concat('%', $1::text, '%')`,
@@ -404,13 +376,13 @@ func (m *LiveEntryModel) ResultStats(ids []string) (*data.ResultStats, error) {
 	cluster_by_type_search := `SELECT
 	unnest(biosyn_class) as biosyn_class, COUNT(1) AS class_count
 	FROM ( SELECT * FROM unnest($1::text[]) AS entry_id) vals
-	JOIN mibig.entries a USING (entry_id)
+	JOIN live.entries a USING (entry_id)
 	GROUP BY biosyn_class`
 
 	cluster_by_phylum_search := `SELECT
 	phylum, COUNT(phylum)
 	FROM ( SELECT * FROM unnest($1::text[]) AS entry_id) vals
-	JOIN mibig.entries USING (entry_id)
+	JOIN live.entries USING (entry_id)
 	JOIN mibig.taxa USING (tax_id)
 	GROUP BY phylum`
 
@@ -475,10 +447,11 @@ func (m *LiveEntryModel) recursiveGuessCategories(term queries.QueryTerm) error 
 }
 
 func (m *LiveEntryModel) LookupContributors(ids []string) ([]data.Contributor, error) {
-	statement := `SELECT a.user_id, name, email, institution
+	statement := `SELECT a.user_id, name, email, organisation_1, organisation_2, organisation_3, orcid
 	FROM ( SELECT * FROM unnest($1::text[]) AS user_id) vals
-	JOIN mibig_submitters.submitters a USING (user_id)
-	WHERE is_public = TRUE AND gdpr_consent = TRUE;
+	JOIN auth.users a USING (user_id)
+	JOIN auth.user_info ui USING (user_id)
+	WHERE public = TRUE;
 	`
 	rows, err := m.DB.Query(statement, pq.Array(ids))
 	if err != nil {
@@ -490,7 +463,7 @@ func (m *LiveEntryModel) LookupContributors(ids []string) ([]data.Contributor, e
 
 	for rows.Next() {
 		contributor := data.Contributor{}
-		err = rows.Scan(&contributor.Id, &contributor.Name, &contributor.Email, &contributor.Organisation)
+		err = rows.Scan(&contributor.Id, &contributor.Name, &contributor.Email, &contributor.Org1, &contributor.Org2, &contributor.Org3, &contributor.Orcid)
 		if err != nil {
 			return nil, err
 		}
@@ -559,7 +532,7 @@ func (m *MockEntryModel) LookupContributors(ids []string) ([]data.Contributor, e
 	return nil, data.ErrNotImplemented
 }
 
-func (m *MockEntryModel) Add(entry data.MibigEntry, taxCache *data.TaxonCache) error {
+func (m *MockEntryModel) Add(entry data.MibigEntry, raw []byte, taxCache *data.TaxonCache) error {
 	return data.ErrNotImplemented
 }
 

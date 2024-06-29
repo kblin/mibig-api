@@ -3,18 +3,18 @@ package models
 import "database/sql"
 
 type Models struct {
-	Entries    EntryModel
-	Roles      RoleModel
-	Submitters UserModel
-	Tokens     TokenModel
+	Entries EntryModel
+	Roles   RoleModel
+	Users   UserModel
+	Tokens  TokenModel
 }
 
 func NewModels(db *sql.DB) Models {
 	return Models{
-		Entries:    NewEntryModel(db),
-		Roles:      NewRoleModel(db),
-		Submitters: NewUserModel(db),
-		Tokens:     NewTokenModel(db),
+		Entries: NewEntryModel(db),
+		Roles:   NewRoleModel(db),
+		Users:   NewUserModel(db),
+		Tokens:  NewTokenModel(db),
 	}
 }
 

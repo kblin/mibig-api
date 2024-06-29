@@ -29,7 +29,7 @@ func (m *LiveRoleModel) Ping() error {
 
 func (m *LiveRoleModel) List() ([]data.Role, error) {
 	var roles []data.Role
-	statement := `SELECT role_id, name, description FROM mibig_submitters.roles`
+	statement := `SELECT role_id, name, description FROM auth.roles`
 	rows, err := m.DB.Query(statement)
 	if err != nil {
 		// No roles is not an error in this context
@@ -53,7 +53,7 @@ func (m *LiveRoleModel) List() ([]data.Role, error) {
 }
 
 func (m *LiveRoleModel) Add(name, description string) (int, error) {
-	statement := `INSERT INTO mibig_submitters.roles (name, description) VALUES (?, ?)`
+	statement := `INSERT INTO auth.roles (name, description) VALUES (?, ?)`
 	ret, err := m.DB.Exec(statement, name, description)
 	if err != nil {
 		return 0, err
@@ -68,7 +68,7 @@ func (m *LiveRoleModel) Add(name, description string) (int, error) {
 
 func (m *LiveRoleModel) UserCount(name string) (int, error) {
 	var count int
-	statement := `SELECT COUNT(role_id) FROM mibig_submitters.rel_submitters_roles LEFT JOIN mibig_submitters.roles USING (role_id)
+	statement := `SELECT COUNT(role_id) FROM auth.rel_user_roles LEFT JOIN auth.roles USING (role_id)
 	WHERE name = ?`
 	row := m.DB.QueryRow(statement, name)
 	err := row.Scan(&count)
@@ -87,20 +87,20 @@ func (m *LiveRoleModel) Delete(name string) error {
 		return err
 	}
 
-	row := tx.QueryRow(`SELECT role_id FROM mibig_submitters.roles WHERE name = ?`, name)
+	row := tx.QueryRow(`SELECT role_id FROM auth.roles WHERE name = ?`, name)
 	err = row.Scan(&roleId)
 	if err != nil {
 		tx.Rollback()
 		return err
 	}
 
-	_, err = tx.Exec(`DELETE FROM mibig_submitters.rel_submitters_roles WHERE role_id = ?`, roleId)
+	_, err = tx.Exec(`DELETE FROM auth.rel_user_roles WHERE role_id = ?`, roleId)
 	if err != nil {
 		tx.Rollback()
 		return err
 	}
 
-	_, err = tx.Exec(`DELETE FROM mibig_submitters.roles WHERE role_id = ?`, roleId)
+	_, err = tx.Exec(`DELETE FROM auth.roles WHERE role_id = ?`, roleId)
 	if err != nil {
 		tx.Rollback()
 		return err
