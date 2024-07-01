@@ -50,6 +50,11 @@ JSON files are assumed to validate against the JSON schema.
 			panic(err)
 		}
 
+		if Entry.Status == "embargoed" {
+			fmt.Printf("Entry %s is embargoed, skipping\n", Entry.Accession)
+			return
+		}
+
 		//		cacheFileName := viper.GetString("taxa.cache")
 		//
 		//		cacheBytes, err := os.ReadFile(cacheFileName)
