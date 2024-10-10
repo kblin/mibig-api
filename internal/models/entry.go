@@ -447,10 +447,10 @@ func (m *LiveEntryModel) recursiveGuessCategories(term queries.QueryTerm) error 
 }
 
 func (m *LiveEntryModel) LookupContributors(ids []string) ([]data.Contributor, error) {
-	statement := `SELECT a.user_id, name, email, organisation_1, organisation_2, organisation_3, orcid
-	FROM ( SELECT * FROM unnest($1::text[]) AS user_id) vals
-	JOIN auth.users a USING (user_id)
-	JOIN auth.user_info ui USING (user_id)
+	statement := `SELECT ui.alias, name, email, organisation_1, organisation_2, organisation_3, orcid
+	FROM ( SELECT * FROM unnest($1::text[]) AS alias) vals
+	JOIN auth.user_info ui USING (alias)
+	JOIN auth.users u USING (user_id)
 	WHERE public = TRUE;
 	`
 	rows, err := m.DB.Query(statement, pq.Array(ids))
@@ -463,9 +463,20 @@ func (m *LiveEntryModel) LookupContributors(ids []string) ([]data.Contributor, e
 
 	for rows.Next() {
 		contributor := data.Contributor{}
-		err = rows.Scan(&contributor.Id, &contributor.Name, &contributor.Email, &contributor.Org1, &contributor.Org2, &contributor.Org3, &contributor.Orcid)
+		var org2, org3, orcid sql.NullString
+		err = rows.Scan(&contributor.Id, &contributor.Name, &contributor.Email, &contributor.Org1, &org2, &org3, &orcid)
 		if err != nil {
 			return nil, err
+		}
+
+		if org2.Valid {
+			contributor.Org2 = org2.String
+		}
+		if org3.Valid {
+			contributor.Org3 = org3.String
+		}
+		if orcid.Valid {
+			contributor.Orcid = orcid.String
 		}
 		contributors = append(contributors, contributor)
 	}
