@@ -17,6 +17,19 @@ coverage:
 	go test -coverprofile=cover.prof ./...
 	go tool cover -html=cover.prof
 
+.PHONY: tailwind-watch
+tailwind-watch:
+	tailwindcss -i ./static/css/input.css -o ./static/css/style.css --watch
+
+
+.PHONY: templ-watch
+templ-watch:
+	templ generate -watch
+
+.PHONY: templ-build
+templ-build:
+	templ generate
+
 .PHONY: confirm
 confirm:
 	@echo -n 'Are you sure? [y/N] ' && read ans && [ $${ans:-N} = y ]
