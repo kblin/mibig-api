@@ -24,7 +24,7 @@ type EntryModel interface {
 	LookupContributors(ids []string) ([]data.Contributor, error)
 
 	Add(entry data.MibigEntry, raw []byte, taxCache *data.TaxonCache) error
-	LoadTaxonEntry(name string, ncbi_taxid int64, taxCache *data.TaxonCache) error
+	LoadTaxonEntry(name string, ncbi_taxid int64, taxCache *data.TaxonCache) (int64, error)
 }
 
 type LiveEntryModel struct {
@@ -547,6 +547,6 @@ func (m *MockEntryModel) Add(entry data.MibigEntry, raw []byte, taxCache *data.T
 	return data.ErrNotImplemented
 }
 
-func (m *MockEntryModel) LoadTaxonEntry(name string, ncbi_taxid int64, taxCache *data.TaxonCache) error {
-	return data.ErrNotImplemented
+func (m *MockEntryModel) LoadTaxonEntry(name string, ncbi_taxid int64, taxCache *data.TaxonCache) (int64, error) {
+	return -1, data.ErrNotImplemented
 }

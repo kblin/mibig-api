@@ -26,30 +26,32 @@ func (m *LiveEntryModel) Add(entry data.MibigEntry, raw []byte, taxCache *data.T
 	return tx.Commit()
 }
 
-func (m LiveEntryModel) LoadTaxonEntry(name string, ncbi_taxid int64, taxCache *data.TaxonCache) error {
+func (m LiveEntryModel) LoadTaxonEntry(name string, ncbi_taxid int64, taxCache *data.TaxonCache) (int64, error) {
 	ctx := context.Background()
 	tx, err := m.DB.BeginTx(ctx, nil)
 	if err != nil {
-		return err
+		return -1, err
 	}
 
 	tax_id, err := getOrCreateTaxId(name, ncbi_taxid, taxCache, ctx, tx)
 	if err != nil {
 		switch {
 		case errors.Is(err, errTaxidOutdated):
-			ncbi_taxid = tax_id
-			_, err = getOrCreateTaxId(name, ncbi_taxid, taxCache, ctx, tx)
+			for errors.Is(err, errTaxidOutdated) {
+				ncbi_taxid = tax_id
+				tax_id, err = getOrCreateTaxId(name, ncbi_taxid, taxCache, ctx, tx)
+			}
 			if err != nil {
 				tx.Rollback()
-				return err
+				return -1, err
 			}
 		default:
 			tx.Rollback()
-			return err
+			return -1, err
 		}
 	}
 
-	return tx.Commit()
+	return ncbi_taxid, tx.Commit()
 }
 
 func insertEntry(entry data.MibigEntry, taxCache *data.TaxonCache, raw []byte, ctx context.Context, tx *sql.Tx) error {
@@ -58,6 +60,12 @@ func insertEntry(entry data.MibigEntry, taxCache *data.TaxonCache, raw []byte, c
 		entry_id, accession, version, status, quality, completeness, tax_id, organism_name, retirement_reason, see_also, data
 	) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11)`
 
+	tax_id, err := getOrCreateTaxId(entry.Taxonomy.Name, entry.Taxonomy.NcbiTaxId, taxCache, ctx, tx)
+	if err != nil {
+		tx.Rollback()
+		return err
+	}
+
 	args := []interface{}{
 		fmt.Sprintf("%s.%d", entry.Accession, entry.Version),
 		entry.Accession,
@@ -65,14 +73,14 @@ func insertEntry(entry data.MibigEntry, taxCache *data.TaxonCache, raw []byte, c
 		entry.Status,
 		entry.Quality,
 		entry.Completeness,
-		entry.Taxonomy.NcbiTaxId,
+		tax_id,
 		entry.Taxonomy.Name,
 		pq.Array(entry.RetirementReasons),
 		pq.Array(entry.SeeAlso),
 		raw,
 	}
 
-	_, err := tx.ExecContext(ctx, statement, args...)
+	_, err = tx.ExecContext(ctx, statement, args...)
 	if err != nil {
 		tx.Rollback()
 		return err

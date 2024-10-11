@@ -21,7 +21,7 @@ import (
 	"os"
 
 	"github.com/spf13/cobra"
-	//"github.com/spf13/viper"
+	"github.com/spf13/viper"
 
 	"secondarymetabolites.org/mibig-api/internal/data"
 	"secondarymetabolites.org/mibig-api/internal/models"
@@ -55,24 +55,34 @@ JSON files are assumed to validate against the JSON schema.
 			return
 		}
 
-		//		cacheFileName := viper.GetString("taxa.cache")
-		//
-		//		cacheBytes, err := os.ReadFile(cacheFileName)
-		//		if err != nil {
-		//			panic(err)
-		//		}
-		//
+		cacheFileName := viper.GetString("taxa.cache")
+
+		cacheBytes, err := os.ReadFile(cacheFileName)
+		if err != nil {
+			panic(fmt.Errorf("Failed to open taxon cache: %s %s", cacheFileName, err))
+		}
+
 		var taxonCache data.TaxonCache = data.TaxonCache{}
-		//
-		//		if err = json.Unmarshal(cacheBytes, &taxonCache); err != nil {
-		//			panic(err)
-		//		}
+
+		if err = json.Unmarshal(cacheBytes, &taxonCache); err != nil {
+			panic(err)
+		}
 		db, err := InitDb()
 		if err != nil {
 			panic(fmt.Errorf("error opening database: %s", err))
 		}
 
 		m := models.NewModels(db)
+
+		tax_id, err := m.Entries.LoadTaxonEntry(Entry.Taxonomy.Name, Entry.Taxonomy.NcbiTaxId, &taxonCache)
+		if err != nil {
+			panic(fmt.Errorf("error loading taxonomy info for %s %d: %s", Entry.Accession, Entry.Taxonomy.NcbiTaxId, err))
+		}
+
+		if tax_id != Entry.Taxonomy.NcbiTaxId {
+			fmt.Printf("Updating entry %s taxid from outdated %d to %d\n", Entry.Accession, Entry.Taxonomy.NcbiTaxId, tax_id)
+			Entry.Taxonomy.NcbiTaxId = tax_id
+		}
 
 		err = m.Entries.Add(Entry, jsonBytes, &taxonCache)
 		if err != nil {
