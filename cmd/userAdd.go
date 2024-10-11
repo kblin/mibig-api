@@ -113,15 +113,16 @@ func init() {
 func InteractiveUserEdit(user *data.User, m models.Models) string {
 	reader := bufio.NewReader(os.Stdin)
 
-	user.Email = readStringValue(reader, user.Email, "Email [%s]: ")
-	user.Info.Name = readStringValue(reader, user.Info.Name, "Name [%s]: ")
-	user.Info.CallName = readStringValue(reader, user.Info.CallName, "Call name [%s]: ")
+	user.Email = readStringValue(reader, user.Email, "Email [%s]: ", false)
+	user.Info.Name = readStringValue(reader, user.Info.Name, "Name [%s]: ", false)
+	user.Info.CallName = readStringValue(reader, user.Info.CallName, "Call name [%s]: ", true)
 	if user.Info.CallName == "" {
 		user.Info.CallName = strings.Split(user.Info.Name, " ")[0]
 	}
-	user.Info.Org1 = readStringValue(reader, user.Info.Org1, "Organisation 1 [%s]: ")
-	user.Info.Org2 = readStringValue(reader, user.Info.Org2, "Organisation 2 [%s]: ")
-	user.Info.Org3 = readStringValue(reader, user.Info.Org3, "Organisation 3 [%s]: ")
+	user.Info.Org1 = readStringValue(reader, user.Info.Org1, "Organisation 1 [%s]: ", false)
+	user.Info.Org2 = readStringValue(reader, user.Info.Org2, "Organisation 2 [%s]: ", true)
+	user.Info.Org3 = readStringValue(reader, user.Info.Org3, "Organisation 3 [%s]: ", true)
+	user.Info.Orcid = readStringValue(reader, user.Info.Orcid, "ORCID [%s]: ", true)
 	new_password := readPassword()
 	user.Info.Public = readBool(reader, user.Info.Public, "Public profile (true/false) [%s]: ")
 	user.Active = readBool(reader, user.Active, "Active (true/false) [%s]: ")
@@ -130,7 +131,7 @@ func InteractiveUserEdit(user *data.User, m models.Models) string {
 	return new_password
 }
 
-func readStringValue(reader *bufio.Reader, old_value, template string) string {
+func readStringValue(reader *bufio.Reader, old_value, template string, emptyOk bool) string {
 	var newVal string
 	for {
 		fmt.Printf(template, old_value)
@@ -139,7 +140,7 @@ func readStringValue(reader *bufio.Reader, old_value, template string) string {
 			tmp_string = old_value
 		}
 		newVal = tmp_string
-		if len(newVal) > 0 {
+		if len(newVal) > 0 || emptyOk {
 			break
 		}
 	}
