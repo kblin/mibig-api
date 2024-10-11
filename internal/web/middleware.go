@@ -6,6 +6,7 @@ import (
 	"strings"
 
 	"github.com/gin-gonic/gin"
+	"github.com/spf13/viper"
 
 	"secondarymetabolites.org/mibig-api/internal/data"
 	"secondarymetabolites.org/mibig-api/internal/utils"
@@ -38,6 +39,7 @@ func (app *application) Authenticate() gin.HandlerFunc {
 			switch {
 			case errors.Is(err, data.ErrRecordNotFound):
 				app.invalidAuthToken(c)
+				c.SetCookie(AUTH_COOKIE_NAME, "", -1, "/", viper.GetString("server.name"), false, true)
 			default:
 				app.serverError(c, err)
 			}
