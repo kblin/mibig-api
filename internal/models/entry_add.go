@@ -5,6 +5,7 @@ import (
 	"database/sql"
 	"errors"
 	"fmt"
+	"time"
 
 	"github.com/lib/pq"
 	"secondarymetabolites.org/mibig-api/internal/data"
@@ -24,6 +25,46 @@ func (m *LiveEntryModel) Add(entry data.MibigEntry, raw []byte, taxCache *data.T
 	}
 
 	return tx.Commit()
+}
+
+func (m *LiveEntryModel) Refresh() error {
+	ctx, _ := context.WithTimeout(context.Background(), 5*time.Second)
+	_, err := m.DB.ExecContext(ctx, `REFRESH MATERIALIZED VIEW live.entry_bgc_info`)
+	if err != nil {
+		return err
+	}
+	_, err = m.DB.ExecContext(ctx, `REFRESH MATERIALIZED VIEW live.entry_compounds`)
+	return err
+}
+
+func (m *LiveEntryModel) List() ([]data.MibigEntry, error) {
+	ctx, _ := context.WithTimeout(context.Background(), 5*time.Second)
+	entries := []data.MibigEntry{}
+	statement := `SELECT accession, version, status, quality, completeness, tax_id, organism_name, retirement_reason, see_also FROM live.entries`
+	rows, err := m.DB.QueryContext(ctx, statement)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	for rows.Next() {
+		var entry data.MibigEntry
+		err = rows.Scan(&entry.Accession, &entry.Version, &entry.Status, &entry.Quality, &entry.Completeness, &entry.Taxonomy.NcbiTaxId, &entry.Taxonomy.Name, pq.Array(&entry.RetirementReasons), pq.Array(&entry.SeeAlso))
+		if err != nil {
+			return nil, err
+		}
+		entries = append(entries, entry)
+	}
+	err = rows.Err()
+	if err != nil {
+		return nil, err
+	}
+	return entries, nil
+}
+
+func (m *LiveEntryModel) Dump() error {
+	ctx, _ := context.WithTimeout(context.Background(), 5*time.Second)
+	_, err := m.DB.ExecContext(ctx, `TRUNCATE live.entries CASCADE`)
+	return err
 }
 
 func (m LiveEntryModel) LoadTaxonEntry(name string, ncbi_taxid int64, taxCache *data.TaxonCache) (int64, error) {
