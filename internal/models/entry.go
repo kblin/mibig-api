@@ -14,7 +14,7 @@ import (
 type EntryModel interface {
 	Counts() (*data.StatCounts, error)
 	ClusterStats() ([]data.StatCluster, error)
-	GenusStats() ([]data.TaxonStats, error)
+	PhylumStats() ([]data.TaxonStats, error)
 	Repository() ([]data.RepositoryEntry, error)
 	Get(ids []string) ([]data.RepositoryEntry, error)
 	Search(t queries.QueryTerm) ([]string, error)
@@ -103,8 +103,8 @@ FROM live.entry_bgc_info GROUP BY name, description, css_class ORDER BY entry_co
 	return clusters, nil
 }
 
-func (m *LiveEntryModel) GenusStats() ([]data.TaxonStats, error) {
-	statement := `SELECT genus, COUNT(genus) AS ct FROM live.entries LEFT JOIN mibig.taxa USING (tax_id) GROUP BY genus ORDER BY ct DESC, genus`
+func (m *LiveEntryModel) PhylumStats() ([]data.TaxonStats, error) {
+	statement := `SELECT phylum, COUNT(phylum) AS ct FROM live.entries LEFT JOIN data.taxa USING (tax_id) GROUP BY phylum ORDER BY ct DESC, phylum`
 	var stats []data.TaxonStats
 
 	rows, err := m.DB.Query(statement)
@@ -115,7 +115,7 @@ func (m *LiveEntryModel) GenusStats() ([]data.TaxonStats, error) {
 
 	for rows.Next() {
 		stat := data.TaxonStats{}
-		if err = rows.Scan(&stat.Genus, &stat.Count); err != nil {
+		if err = rows.Scan(&stat.Phylum, &stat.Count); err != nil {
 			return nil, err
 		}
 		stats = append(stats, stat)
@@ -514,7 +514,7 @@ func (m *MockEntryModel) ClusterStats() ([]data.StatCluster, error) {
 	return nil, data.ErrNotImplemented
 }
 
-func (m *MockEntryModel) GenusStats() ([]data.TaxonStats, error) {
+func (m *MockEntryModel) PhylumStats() ([]data.TaxonStats, error) {
 	return nil, data.ErrNotImplemented
 }
 

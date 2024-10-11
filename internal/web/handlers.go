@@ -28,6 +28,7 @@ func (app *application) version(c *gin.Context) {
 type Stats struct {
 	Counts   *data.StatCounts   `json:"counts"`
 	Clusters []data.StatCluster `json:"clusters"`
+	Phyla    []data.TaxonStats  `json:"phyla"`
 }
 
 func (app *application) stats(c *gin.Context) {
@@ -43,9 +44,16 @@ func (app *application) stats(c *gin.Context) {
 		return
 	}
 
+	phyla, err := app.Models.Entries.PhylumStats()
+	if err != nil {
+		app.serverError(c, err)
+		return
+	}
+
 	stat_info := Stats{
 		Counts:   counts,
 		Clusters: clusters,
+		Phyla:    phyla,
 	}
 
 	c.JSON(http.StatusOK, &stat_info)

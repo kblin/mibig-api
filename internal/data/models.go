@@ -39,8 +39,8 @@ type StatCounts struct {
 }
 
 type TaxonStats struct {
-	Genus string `json:"genus"`
-	Count int    `json:"count"`
+	Phylum string `json:"description"`
+	Count  int    `json:"count"`
 }
 
 type ProductTag struct {
