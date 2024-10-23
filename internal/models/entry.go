@@ -180,7 +180,7 @@ func (m *LiveEntryModel) Get(ids []string) ([]data.RepositoryEntry, error) {
 	statement := `SELECT
 		a.entry_id,
 		a.minimal,
-		l.completeness AS complete,
+		completeness AS complete,
 		a.status,
 		array_agg(DISTINCT c.name) AS compounds,
 		array_agg(array_to_json(synonyms)) AS synonyms,
@@ -191,8 +191,7 @@ func (m *LiveEntryModel) Get(ids []string) ([]data.RepositoryEntry, error) {
 	JOIN mibig.rel_entries_types USING (entry_id)
 	JOIN mibig.bgc_types b USING (bgc_type_id)
 	JOIN mibig.chem_compounds c USING (entry_id)
-	JOIN mibig.taxa t USING (tax_id)
-	JOIN mibig.loci l USING (entry_id)
+	JOIN data.taxa t USING (tax_id)
 	GROUP BY a.entry_id, minimal, complete, t.name
 	ORDER BY a.entry_id`
 
@@ -236,14 +235,14 @@ var statementByCategory = map[string]string{
 	SELECT bgc_type_id FROM all_subtypes)`,
 	"compound":     `SELECT entry_id FROM mibig.chem_compounds WHERE name ILIKE $1`,
 	"acc":          `SELECT entry_id FROM live.entries WHERE entry_id ILIKE $1`,
-	"superkingdom": `SELECT entry_id FROM live.entries LEFT JOIN mibig.taxa USING (tax_id) WHERE superkingdom ILIKE $1`,
-	"kingdom":      `SELECT entry_id FROM live.entries LEFT JOIN mibig.taxa USING (tax_id) WHERE kingdom ILIKE $1`,
-	"phylum":       `SELECT entry_id FROM live.entries LEFT JOIN mibig.taxa USING (tax_id) WHERE phylum ILIKE $1`,
-	"class":        `SELECT entry_id FROM live.entries LEFT JOIN mibig.taxa USING (tax_id) WHERE class ILIKE $1`,
-	"order":        `SELECT entry_id FROM live.entries LEFT JOIN mibig.taxa USING (tax_id) WHERE taxonomic_order ILIKE $1`,
-	"family":       `SELECT entry_id FROM live.entries LEFT JOIN mibig.taxa USING (tax_id) WHERE family ILIKE $1`,
-	"genus":        `SELECT entry_id FROM live.entries LEFT JOIN mibig.taxa USING (tax_id) WHERE genus ILIKE $1`,
-	"species":      `SELECT entry_id FROM live.entries LEFT JOIN mibig.taxa USING (tax_id) WHERE species ILIKE $1`,
+	"superkingdom": `SELECT entry_id FROM live.entries LEFT JOIN data.taxa USING (tax_id) WHERE superkingdom ILIKE $1`,
+	"kingdom":      `SELECT entry_id FROM live.entries LEFT JOIN data.taxa USING (tax_id) WHERE kingdom ILIKE $1`,
+	"phylum":       `SELECT entry_id FROM live.entries LEFT JOIN data.taxa USING (tax_id) WHERE phylum ILIKE $1`,
+	"class":        `SELECT entry_id FROM live.entries LEFT JOIN data.taxa USING (tax_id) WHERE class ILIKE $1`,
+	"order":        `SELECT entry_id FROM live.entries LEFT JOIN data.taxa USING (tax_id) WHERE taxonomic_order ILIKE $1`,
+	"family":       `SELECT entry_id FROM live.entries LEFT JOIN data.taxa USING (tax_id) WHERE family ILIKE $1`,
+	"genus":        `SELECT entry_id FROM live.entries LEFT JOIN data.taxa USING (tax_id) WHERE genus ILIKE $1`,
+	"species":      `SELECT entry_id FROM live.entries LEFT JOIN data.taxa USING (tax_id) WHERE species ILIKE $1`,
 	"minimal":      `SELECT entry_id FROM live.entries WHERE minimal = $1`,
 	"completeness": `SELECT entry_id FROM live.entries LEFT JOIN mibig.loci USING (entry_id) WHERE completeness = $1`,
 	"ncbi":         `SELECT entry_id FROM live.entries LEFT JOIN mibig.loci USING (entry_id) WHERE accession ILIKE $1`,
