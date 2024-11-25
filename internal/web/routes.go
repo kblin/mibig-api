@@ -41,5 +41,10 @@ func (app *application) routes() *gin.Engine {
 		}
 	}
 
+	redirect := app.Mux.Group("/go")
+	{
+		redirect.GET("/:accession", app.Redirect)
+	}
+
 	return app.Mux
 }

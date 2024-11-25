@@ -22,6 +22,7 @@ type EntryModel interface {
 	ResultStats(ids []string) (*data.ResultStats, error)
 	GuessCategories(query *queries.Query) error
 	LookupContributors(ids []string) ([]data.Contributor, error)
+	Latest(accession string) (*data.RepositoryEntry, error)
 
 	Add(entry data.MibigEntry, raw []byte, taxCache *data.TaxonCache) error
 	Refresh() error
@@ -485,6 +486,30 @@ func (m *LiveEntryModel) LookupContributors(ids []string) ([]data.Contributor, e
 	return contributors, nil
 }
 
+func (m *LiveEntryModel) Latest(accession string) (*data.RepositoryEntry, error) {
+	statement := `SELECT
+	entry_id, quality, completeness, status, compounds, synonyms, descriptions, css_classes, organism_name
+	FROM live.entries
+	LEFT JOIN live.entry_compounds USING (entry_id)
+	LEFT JOIN live.entry_bgc_info USING (entry_id)
+	WHERE accession=$1
+	ORDER BY version DESC`
+
+	rows, err := m.DB.Query(statement, accession)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	entries, err := parseRepositoryEntriesFromDB(rows)
+	if err != nil {
+		return nil, err
+	}
+	if len(entries) == 0 {
+		return nil, data.ErrRecordNotFound
+	}
+	return &entries[0], nil
+}
+
 /* type EntryModel interface {
 	Counts() (*data.StatCounts, error)
 	ClusterStats() ([]data.StatCluster, error)
@@ -563,4 +588,8 @@ func (m *MockEntryModel) Dump() error {
 
 func (m *MockEntryModel) LoadTaxonEntry(name string, ncbi_taxid int64, taxCache *data.TaxonCache) (int64, error) {
 	return -1, data.ErrNotImplemented
+}
+
+func (m *MockEntryModel) Latest(accession string) (*data.RepositoryEntry, error) {
+	return nil, data.ErrNotImplemented
 }

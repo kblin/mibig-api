@@ -1,6 +1,7 @@
 package web
 
 import (
+	"fmt"
 	"net/http"
 
 	"github.com/gin-gonic/gin"
@@ -200,4 +201,21 @@ func (app *application) Contributors(c *gin.Context) {
 	}
 
 	c.JSON(http.StatusOK, contributors)
+}
+
+func (app *application) Redirect(c *gin.Context) {
+	accession := c.Param("accession")
+	entry, err := app.Models.Entries.Latest(accession)
+
+	if err == data.ErrRecordNotFound {
+		c.JSON(http.StatusNotFound, queryError{Message: err.Error(), Error: true})
+	}
+	if err != nil {
+		app.serverError(c, err)
+		return
+	}
+	target := fmt.Sprintf("/go/%s", entry.Accession)
+
+	c.Redirect(http.StatusMovedPermanently, target)
+
 }
