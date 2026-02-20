@@ -25,6 +25,7 @@ type EntryModel interface {
 	Latest(accession string) (*data.RepositoryEntry, error)
 
 	Add(entry data.MibigEntry, raw []byte, taxCache *data.TaxonCache) error
+	Update(entry data.MibigEntry, raw []byte, taxCache *data.TaxonCache) error
 	Refresh() error
 	List() ([]data.MibigEntry, error)
 	LoadTaxonEntry(name string, ncbi_taxid int64, taxCache *data.TaxonCache) (int64, error)
@@ -571,6 +572,10 @@ func (m *MockEntryModel) LookupContributors(ids []string) ([]data.Contributor, e
 }
 
 func (m *MockEntryModel) Add(entry data.MibigEntry, raw []byte, taxCache *data.TaxonCache) error {
+	return data.ErrNotImplemented
+}
+
+func (m *MockEntryModel) Update(entry data.MibigEntry, raw []byte, taxCache *data.TaxonCache) error {
 	return data.ErrNotImplemented
 }
 

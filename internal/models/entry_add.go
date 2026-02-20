@@ -27,6 +27,22 @@ func (m *LiveEntryModel) Add(entry data.MibigEntry, raw []byte, taxCache *data.T
 	return tx.Commit()
 }
 
+func (m *LiveEntryModel) Update(entry data.MibigEntry, raw []byte, taxCache *data.TaxonCache) error {
+	ctx := context.Background()
+	tx, err := m.DB.BeginTx(ctx, nil)
+	if err != nil {
+		return err
+	}
+
+	err = updateEntry(entry, taxCache, raw, ctx, tx)
+	if err != nil {
+		tx.Rollback()
+		return err
+	}
+
+	return tx.Commit()
+}
+
 func (m *LiveEntryModel) Refresh() error {
 	ctx, _ := context.WithTimeout(context.Background(), 5*time.Second)
 	_, err := m.DB.ExecContext(ctx, `REFRESH MATERIALIZED VIEW live.entry_bgc_info`)
@@ -95,12 +111,35 @@ func (m LiveEntryModel) LoadTaxonEntry(name string, ncbi_taxid int64, taxCache *
 	return ncbi_taxid, tx.Commit()
 }
 
+func updateEntry(entry data.MibigEntry, taxCache *data.TaxonCache, raw []byte, ctx context.Context, tx *sql.Tx) error {
+	statement := `UPDATE live.entries SET
+		accession = $2,
+		version = $3,
+		status = $4,
+		quality = $5,
+		completeness = $6,
+		tax_id = $7,
+		organism_name = $8,
+		retirement_reason = $9,
+		see_also = $10,
+		data = $11
+	WHERE entry_id = $1`
+
+	return updateOrInsertEntry(statement, entry, taxCache, raw, ctx, tx)
+
+}
+
 func insertEntry(entry data.MibigEntry, taxCache *data.TaxonCache, raw []byte, ctx context.Context, tx *sql.Tx) error {
 
 	statement := `INSERT INTO live.entries (
 		entry_id, accession, version, status, quality, completeness, tax_id, organism_name, retirement_reason, see_also, data
 	) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11)`
 
+	return updateOrInsertEntry(statement, entry, taxCache, raw, ctx, tx)
+
+}
+
+func updateOrInsertEntry(statement string, entry data.MibigEntry, taxCache *data.TaxonCache, raw []byte, ctx context.Context, tx *sql.Tx) error {
 	tax_id, err := getOrCreateTaxId(entry.Taxonomy.Name, entry.Taxonomy.NcbiTaxId, taxCache, ctx, tx)
 	if err != nil {
 		tx.Rollback()
