@@ -44,6 +44,7 @@ func (app *application) routes() *gin.Engine {
 	redirect := app.Mux.Group("/go")
 	{
 		redirect.GET("/:accession", app.Redirect)
+		redirect.GET("/:accession/:extra", app.Redirect)
 	}
 
 	repository := app.Mux.Group("/repository")

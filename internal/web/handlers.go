@@ -3,6 +3,7 @@ package web
 import (
 	"fmt"
 	"net/http"
+	"strings"
 
 	"github.com/gin-gonic/gin"
 	"github.com/spf13/viper"
@@ -204,18 +205,30 @@ func (app *application) Contributors(c *gin.Context) {
 }
 
 func (app *application) Redirect(c *gin.Context) {
-	accession := c.Param("accession")
-	entry, err := app.Models.Entries.Latest(accession)
+	acc := c.Param("accession")
+	extra := c.Param("extra")
 
-	if err == data.ErrRecordNotFound {
-		c.JSON(http.StatusNotFound, queryError{Message: err.Error(), Error: true})
-	}
-	if err != nil {
-		app.serverError(c, err)
-		return
-	}
-	target := fmt.Sprintf("/go/%s", entry.Accession)
+	template := "/repository/%s/%s"
+	if !strings.Contains(acc, ".") {
 
-	c.Redirect(http.StatusMovedPermanently, target)
+		entry, err := app.Models.Entries.Latest(acc)
+
+		if err == data.ErrRecordNotFound {
+			c.JSON(http.StatusNotFound, queryError{Message: err.Error(), Error: true})
+			return
+		}
+		if err != nil {
+			app.serverError(c, err)
+			return
+		}
+		acc = entry.Accession
+	}
+
+	if len(extra) == 0 || extra == "1" {
+		extra = "index.html"
+	}
+	target := fmt.Sprintf(template, acc, extra)
+
+	c.Redirect(http.StatusFound, target)
 
 }
