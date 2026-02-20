@@ -46,5 +46,10 @@ func (app *application) routes() *gin.Engine {
 		redirect.GET("/:accession", app.Redirect)
 	}
 
+	repository := app.Mux.Group("/repository")
+	{
+		repository.Static("/", app.RepositoryPath)
+	}
+
 	return app.Mux
 }

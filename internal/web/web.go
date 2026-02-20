@@ -9,6 +9,7 @@ import (
 	"net/http"
 	"os"
 	"os/signal"
+	"path/filepath"
 	"syscall"
 	"time"
 
@@ -23,10 +24,11 @@ import (
 )
 
 type application struct {
-	logger *zap.SugaredLogger
-	Models models.Models
-	Mail   mailer.Mailer
-	Mux    *gin.Engine
+	logger         *zap.SugaredLogger
+	Models         models.Models
+	Mail           mailer.Mailer
+	Mux            *gin.Engine
+	RepositoryPath string
 }
 
 func Run(debug bool) {
@@ -55,11 +57,18 @@ func Run(debug bool) {
 	mailSender := mailer.New(&mailConfig)
 	mux := setupMux(debug, logger.Desugar())
 
+	repositoryPath, err := filepath.Abs(viper.GetString("server.repository"))
+	if err != nil {
+		logger.Fatalf(err.Error())
+	}
+	logger.Infow("using repository path", "path", repositoryPath)
+
 	app := &application{
-		logger: logger,
-		Models: models.NewModels(db),
-		Mail:   mailSender,
-		Mux:    mux,
+		logger:         logger,
+		Models:         models.NewModels(db),
+		Mail:           mailSender,
+		Mux:            mux,
+		RepositoryPath: repositoryPath,
 	}
 
 	mux = app.routes()

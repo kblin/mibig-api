@@ -22,7 +22,10 @@ import (
 	"secondarymetabolites.org/mibig-api/internal/web"
 )
 
-var debug bool
+var (
+	debug      bool
+	repository string
+)
 
 // serveCmd represents the serve command
 var serveCmd = &cobra.Command{
@@ -46,6 +49,10 @@ This service provides access to the MIBiG database.`,
 
 func init() {
 	rootCmd.AddCommand(serveCmd)
+	//load defaults from viper
+	viper.SetDefault("server.repository", "repository")
 
 	serveCmd.Flags().BoolVarP(&debug, "debug", "d", false, "Enable debug info")
+	serveCmd.Flags().StringVarP(&repository, "repository", "r", viper.GetString("server.repository"), "Set the repository path")
+	viper.BindPFlag("server.repository", serveCmd.Flags().Lookup("repository"))
 }
