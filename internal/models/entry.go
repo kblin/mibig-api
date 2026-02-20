@@ -127,12 +127,12 @@ func (m *LiveEntryModel) PhylumStats() ([]data.TaxonStats, error) {
 }
 
 func (m *LiveEntryModel) Repository() ([]data.RepositoryEntry, error) {
-	statement := `SELECT
+	statement := `SELECT DISTINCT ON (accession)
 	entry_id, quality, completeness, status, compounds, synonyms, descriptions, css_classes, organism_name
 	FROM live.entries
 	LEFT JOIN live.entry_compounds USING (entry_id)
 	LEFT JOIN live.entry_bgc_info USING (entry_id)
-	ORDER BY entry_id`
+	ORDER BY accession, version DESC`
 
 	rows, err := m.DB.Query(statement)
 	if err != nil {
